@@ -1,0 +1,655 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+# comparing the flat image on sky ghost images
+3 datasets are compared
+- 2020-01-14 which has the Ghost images, first install of HWP with polariser at ~1.5deg
+- 2020-03-16 A scan with no tilt angle and polariser mounted close to horn array
+- 2019-04-06 An old dataset with no HWP
+
+Some Fitting of peaks is attempted
+
+```{python}
+import qubic.sb_fitting as sbfit
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+import qubic.fibtools as ft
+import scipy.optimize as opt
+```
+
+```{python}
+dirfile = '/home/james/synthbeamdata/2020-01-14'
+
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+
+
+TESNum = 93
+
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+
+#print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+
+
+plt.figure(figsize=(12,16))
+plt.subplot(1,3,1)
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+```
+
+```{python}
+"""load 6 2020-01-14 flatmaps"""
+psflist = np.array([6, 37, 50, 58, 76, 93])
+flatmaps = np.zeros([6, 101, 101])
+
+for i, tes in enumerate(psflist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    print(tes, i, flatmap.shape, flatmap[0].shape)
+    flatmaps[i, :, :] = flatmap
+    
+plt.figure(figsize=(10,10))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    #plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Flatmap TES {}'.format(tes))
+```
+
+```{python}
+"""load psfs"""
+"""load and plot simulation data"""
+psflist = np.array([6, 37, 50, 58, 76, 93])
+
+psfdata = np.zeros([6, 3, 251001])
+for i, tes in enumerate(psflist):
+    data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
+    psfdata[i,:,:] = data.T
+
+plt.figure(figsize=(10,10))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+    plt.axis('equal')
+    #plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Sim data TES {}'.format(tes))
+```
+
+```{python}
+"""make a meshgrid from the psf data to make fits"""
+
+print(flatmaps[0,:,:].shape, psfdata[0,:,:].shape, psfdata[0,0,:].shape)
+
+def makemeshgrid(psfdata, meshsize):
+    x = np.linspace(min(psfdata[0,:]), max(psfdata[0,:]), meshsize)
+    y = np.linspace(min(psfdata[1,:]), max(psfdata[1,:]), meshsize)
+
+    X,Y = np.meshgrid(x, y)
+
+    # Interpolate (x,y,z) points [mat] over a normal (x,y) grid [X,Y]
+    #   Depending on your "error", you may be able to use other methods
+    Z = griddata((psfdata[0,:], psfdata[1,:]), psfdata[2,:], (X,Y), method='nearest')
+
+    #plt.pcolormesh(X,Y,Z)
+    #plt.show()
+    return Z
+
+meshsize = 151
+psfmesh = np.zeros([6, meshsize, meshsize])
+for i, tes in enumerate(psflist):
+    psfmesh[i,:,:] = makemeshgrid(psfdata[i], meshsize)
+
+print(psfmesh.shape)
+
+
+x = np.linspace(min(psfdata[0,0,:]), max(psfdata[0,0,:]), meshsize)
+y = np.linspace(min(psfdata[0,1,:]), max(psfdata[0,1,:]), meshsize)
+
+# X,Y = np.meshgrid(x, y)
+# print(x.shape, X.shape)
+```
+
+```{python}
+"""do fits and find peaks to psf data"""
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=False)
+peaks = np.zeros([6,4,9])
+for i, tes in enumerate(psflist):
+
+    fit, xypeaks = sbfit.fit_sb(psfmesh[i,:,:], x, y, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    peaks[i,:,:] = xypeaks
+```
+
+```{python}
+print(peaks.shape)
+```
+
+```{python}
+"""do plots"""
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+
+for i, tes in enumerate(psflist):
+
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,2,1)
+    plt.imshow(psfmesh[i,:,:], aspect='equal',
+        extent=[np.min(x), np.max(x), np.min(y), np.max(y)])
+    plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.axis('equal')
+```
+
+```{python}
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=False)
+"""okay for some reason those fits were aweful
+try with recent data"""
+
+#fit peaks to "new" data
+dirfilen = '/home/james/synthbeamdata/2020-03-16'
+newpeaks = np.zeros([6,4,9])
+flatmapsr = np.zeros([6, 51, 51])
+chiarrnew = np.array([])
+
+for i, tes in enumerate(psflist):
+
+    flatmap, az2, el2 = sbfit.get_flatmap(tes, dirfilen, azmin = azmin, azmax=azmax)
+    flatmap=flatmap*-1.0
+    flatmap = np.flip(flatmap)
+    flatmapsr[i, :, :] = flatmap
+    
+for i, tes in enumerate(psflist):
+
+    fit, xypeaks = sbfit.fit_sb(flatmapsr[i,:,:], az2, el2, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    newpeaks[i,:,:] = xypeaks
+    chiarrnew = np.append(chiarrnew, fit[4])
+```
+
+```{python}
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+
+for i, tes in enumerate(psflist):
+
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,2,1)
+    plt.imshow(flatmapsr[i,:,:], aspect='equal',
+        extent=[np.min(az2)*c50, np.max(az2)*c50, np.min(el2), np.max(el2)])
+    plt.plot(newpeaks[i, 0, :], newpeaks[i, 1, :], 'r.')
+    plt.title('2020-03-16 data TES {}'.format(tes))
+    #plt.axis('equal')
+    
+    #plot the ghost data
+    plt.subplot(1,2,2)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+    plt.plot(newpeaks[i, 0, :], newpeaks[i, 1, :], 'r.')
+    plt.title('2020-01-14 data TES {}'.format(tes))
+```
+
+```{python}
+"""not really insightful for these tes... make try for all tes or the special list"""
+#here is a list of good tes for comparison
+complist = [9, 16, 22, 24, 27, 50, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+    170, 171, 172, 181, 186, 201, 208, 210, 213, 216, 218, 219]
+```
+
+```{python}
+"""20200104 comp list"""
+"""load 6 2020-01-14 flatmaps
+indeed we can see there are ghosts"""
+flatmaps = np.zeros([len(complist), 101, 101])
+
+for i, tes in enumerate(complist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    flatmap = np.flip(flatmap)
+    flatmaps[i, :, :] = flatmap
+    
+plt.figure(figsize=(5,100))
+for i , tes in enumerate(complist):
+    plt.subplot(len(complist),1,i+1)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    #plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Flatmap TES {}'.format(tes))
+```
+
+```{python}
+"""for 2020 03 16 data"""
+#this shoud be flipped
+#fit peaks to "new" data
+dirfilen = '/home/james/synthbeamdata/2020-03-16'
+newpeaks = np.zeros([len(complist),4,9])
+flatmapsr = np.zeros([len(complist), 51, 51])
+chiarrnew = np.array([])
+
+for i, tes in enumerate(complist):
+
+    flatmap, az2, el2 = sbfit.get_flatmap(tes, dirfilen, azmin = azmin, azmax=azmax)
+    flatmap=flatmap*-1.0
+    flatmap = np.flip(flatmap)
+    flatmapsr[i, :, :] = flatmap
+    
+for i, tes in enumerate(complist):
+
+    fit, xypeaks = sbfit.fit_sb(flatmapsr[i,:,:], az2, el2, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    newpeaks[i,:,:] = xypeaks
+    chiarrnew = np.append(chiarrnew, fit[4])
+```
+
+```{python}
+print(flatmapsr.shape, flatmaps.shape)
+```
+
+```{python}
+"""do comp list comparison plots"""
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+
+for i, tes in enumerate(complist):
+
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,2,1)
+    plt.imshow(flatmapsr[i,:,:], aspect='equal',
+        extent=[np.min(az2)*c50, np.max(az2)*c50, np.min(el2), np.max(el2)])
+    plt.plot(newpeaks[i, 0, :], newpeaks[i, 1, :], 'r.')
+    plt.title('2020-03-16 data TES {}'.format(tes))
+    #plt.axis('equal')
+    
+    #plot the ghost data
+    plt.subplot(1,2,2)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+    plt.plot(newpeaks[i, 0, :], newpeaks[i, 1, :], 'r.')
+    plt.title('2020-01-14 data TES {}'.format(tes))
+```
+
+```{python}
+"""now compare with better res data"""
+oldflatmaps = np.zeros([len(complist), 144, 182])
+oldpeaks = np.zeros([len(complist),4,9])
+flatmapso = np.zeros([len(complist), 144, 182])
+chiarrold = np.array([])
+dirfileo = '/home/james/synthbeamdata/150GHz-2019-04-06'
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=False)
+
+for i, tes in enumerate(complist):
+
+    flatmap, az3, el3 = sbfit.get_flatmap(tes, dirfileo, azmin = azmin, azmax=azmax)
+#     flatmap=flatmap*-1.0
+#     flatmap = np.flip(flatmap)
+    flatmapso[i, :, :] = flatmap
+    
+for i, tes in enumerate(complist):
+
+    fit, xypeaks = sbfit.fit_sb(flatmapso[i,:,:], az3, el3, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    oldpeaks[i,:,:] = xypeaks
+    chiarrold = np.append(chiarrold, fit[4])
+```
+
+```{python}
+"""repeat plot for 04 06 2019 data"""
+for i, tes in enumerate(complist):
+
+    #plot the 2019 data
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,3,1)
+    plt.imshow(flatmapso[i,:,:], aspect='equal',
+        extent=[np.min(az3)*c50, np.max(az3)*c50, np.min(el3), np.max(el3)])
+    plt.plot(oldpeaks[i, 0, :], oldpeaks[i, 1, :], 'r.')
+    plt.title('2019-04-06 data TES {}'.format(tes))
+    #plt.axis('equal')
+    #plot the january2020 data
+    plt.subplot(1,3,2)
+    plt.imshow(flatmapsr[i,:,:], aspect='equal',
+        extent=[np.min(az2)*c50, np.max(az2)*c50, np.min(el2), np.max(el2)])
+    plt.plot(newpeaks[i, 0, :], newpeaks[i, 1, :], 'k.')
+    plt.title('2020-03-16 data TES {}'.format(tes))
+    
+    #plot the ghost data
+    plt.subplot(1,3,3)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+    plt.plot(oldpeaks[i, 0, :], oldpeaks[i, 1, :], 'r.')
+    plt.plot(newpeaks[i, 0, :], newpeaks[i, 1, :], 'k.')
+    plt.title('2020-01-14 data TES {}'.format(tes))
+    
+    plt.savefig('/home/james/synthbeamdata/datapics/oldnewghostfits{}.png'.format(tes))
+```
+
+```{python}
+"""20200104 full list"""
+"""load 6 2020-01-14 flatmaps
+indeed we can see there are ghosts"""
+fullarray = np.linspace(1, 256, 256, dtype='int')
+#print(fullarray)
+
+flatmaps = np.zeros([len(fullarray), 101, 101])
+
+for i, tes in enumerate(fullarray):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    #print(tes, i, flatmap.shape, flatmap[0].shape)
+    flatmaps[i, :, :] = flatmap
+    
+plt.figure(figsize=(5,100))
+for i , tes in enumerate(fullarray):
+    plt.subplot(len(fullarray),1,i+1)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    #plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Flatmap TES {}'.format(tes))
+```
+
+```{python}
+"""make nice pdf like JC"""
+
+plt.rc('figure',figsize=(16,8))
+nnx = 5
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+elmin = min(el)
+elmax = max(el)
+azmin = min(az)
+azmax = max(az)
+
+
+for k in range(nplots):
+    plt.figure()
+    for i in range(nnx*nny):
+        ites = i+k*nnx*nny
+        if ites < 256:
+            plt.subplot(nny,nnx,i+1)
+            mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+            plt.imshow(flatmaps[ites,:,:], aspect='equal',
+                   extent=[np.cos(np.radians(50))*azmin, np.cos(np.radians(50))*azmax, elmin, elmax],
+                   vmin=mm-ss, vmax=mm+30*ss)
+            plt.title('TES {}'.format(ites+1))
+            plt.savefig('jj{}.png'.format(k))
+    plt.tight_layout()
+    plt.show()
+```
+
+```{python}
+"""make pdf plot like JC"""
+plt.rc('figure',figsize=(16,8))
+nnx = 4
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+dirfilen = '/home/james/synthbeamdata/2020-03-16'
+dirfileo = '/home/james/synthbeamdata/150GHz-2019-04-06'
+dirfileg = '/home/james/synthbeamdata/2020-01-14'
+
+
+
+for i in range(256):
+    flatmapo, az, el = sbfit.get_flatmap(i+1, dirfileo, azmin = azmin, azmax=azmax)
+    flatmapn, az, el = sbfit.get_flatmap(i+1, dirfilen, azmin = azmin, azmax=azmax)
+    flatmapg, az, el = sbfit.get_flatmap(i+1, dirfileg, azmin = azmin, azmax=azmax)
+    
+    plt.figure(figsize=(16,8))
+    plt.subplot(1,3,1)
+    plt.imshow(flatmapo, aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.title('2019-04-16 TES {}'.format(i+1))
+    
+    plt.subplot(1,3,2)
+    plt.imshow(flatmapn*-1.0, aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.title('2020-03-16 TES {}'.format(i+1))
+    
+    plt.subplot(1,3,3)
+    plt.imshow(flatmapg, aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.title('2020-01-14 Ghost data TES {}'.format(i+1))
+    
+    plt.tight_layout()
+    plt.show()
+```
+
+```{python}
+complist = [9, 16, 22, 24, 27, 50, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+    170, 171, 172, 181, 186, 201, 208, 210, 213, 216, 218, 219]
+subarr = [16, 22, 27, 51, 58, 59, 75, 86, 93, 107, 110, 120, 123, 134, 135, 138, 141, 170,  172,  181, 201,
+          208, 210, 213, 216, 218, 219] 
+```
+
+```{python}
+def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    x, y = xdatatuple
+    xo = float(xo)
+    yo = float(yo)    
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = offset + amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))
+    return g.ravel()
+```
+
+```{python}
+"""compare ghosts as gaussians"""
+#load the ghost images
+# %matplotlib inline
+#initial_guess = (840000,-7, 48, 2, 2, 0, 1)
+#initial_guess = (6146515,  25, 30, 2,  2,  3.44445665e+06, -6.06942641e+04)
+print(az.shape, flatmaps[tes,:,:].ravel().shape, max(flatmaps[tes,:,:].ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+AZ = AZ*c50
+for i, tes in enumerate(subarr[0:1]):
+    
+    plt.figure(figsize=(10,16))
+    plt.imshow(flatmaps[tes,:,:], aspect='equal',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+    plt.title('2020-01-14 Ghost Data TES {}'.format(tes))
+
+    initial_guess = (max(flatmaps[tes,:,:].ravel()), -5, 47, 5, 5, 0, 1)
+    popt, pcov = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[tes,:,:].ravel(), p0=initial_guess)
+    print(popt)
+    data_fitted = twoD_Gaussian((AZ, EL), *popt)
+
+    plt.contour(AZ, EL, data_fitted.reshape(101, 101), 8, colors='k')
+
+    #plt.ginput(2)
+    #plt.close()
+```
+
+```{python}
+"""20200104 comp list"""
+"""load 6 2020-01-14 flatmaps
+indeed we can see there are ghosts"""
+#here is a list of good tes for comparison
+complist = [9, 16, 22, 24, 27, 50, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+    170, 171, 172, 181, 186, 201, 208, 210, 213, 216, 218, 219]
+
+flatmaps = np.zeros([len(complist), 101, 101])
+
+for i, tes in enumerate(complist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    flatmap = np.flip(flatmap)
+    flatmaps[i, :, :] = flatmap
+
+plt.figure(figsize=(10,20))
+plt.imshow(flatmaps[2,:,:], aspect='equal',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+plt.xticks(np.arange(-12, 12, step=1))
+plt.yticks(np.arange(45, 65, step=1))
+plt.grid(True)
+
+```
+
+```{python}
+testmap = flatmaps[2,:,:]
+testaz = np.array([])
+testel = np.array([])
+newmap = np.array([])
+print(testmap.shape)
+AZ, EL = np.meshgrid(az, el)
+AZ=AZ*c50
+taz = AZ
+tel = EL
+```
+
+```{python}
+azval = -6
+elval = 48
+testmap = testmap.ravel()
+taz = AZ.ravel()
+tel = EL.ravel()
+testmap[testmap < 1000] = 0
+print(AZ.shape, testmap.shape, np.mean(testmap), max(testmap))
+
+
+#set values around points to zero or some number
+for i, azz in enumerate(taz):
+    if abs(azz - azval) > 3:      
+        testmap[i] = 0
+        #testaz = np.append(testaz, azz)
+        
+for i, ell in enumerate(tel): 
+    if abs(ell - elval) > 3:      
+        testmap[i] = 0
+        #testel = np.append(testel, ell)
+
+# for i, azz in enumerate(taz.ravel()):
+#     for j, ell in enumerate(tel.ravel()):
+#         if abs(azz - azval) > 3 and abs(ell - elval) > 3:
+#             testmap[j] = 1000
+#             testaz = np.append(testaz, azz)
+#             testel = np.append(testel, ell)
+            
+# for i, azz in enumerate(taz.ravel()):
+#     for j, ell in enumerate(tel.ravel()):
+#         if abs(azz - azval) > 3 and abs(ell - elval) > 3:
+#             newmap = np.append(newmap, 1000)
+#             testaz = np.append(testaz, azz)
+#             testel = np.append(testel, ell)
+#         else:
+#             newmap = np.append(newmap, tesmap[j])
+
+#print(testaz.shape, testel.shape)
+
+#azmesh = testaz.reshape(101, 101)
+mapmesh = testmap.reshape(101,101)
+#print(testmap.shape, type(testmap), type(mapmesh), mapmesh.shape, max(testmap))
+
+# initial_guess = (30000, azval, elval, 0.5, 0.5, 0, 0)
+# popt, pcov = opt.curve_fit(twoD_Gaussian, (AZ, EL), mapmesh.ravel(), p0=initial_guess)
+# data_fitted = twoD_Gaussian((AZ, EL), *popt)
+
+plt.figure(figsize=(10,10))
+plt.imshow(mapmesh, aspect='equal',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+
+#plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+#plt.xticks(np.arange(-12, 12, step=1))
+#plt.yticks(np.arange(45, 65, step=1))
+#plt.grid(True)
+#plt.axis([np.min(az), np.max(az), np.min(el), np.max(el)])
+# print(popt)
+# print(pcov)
+# p_sigma = np.sqrt(np.diag(pcov))
+# print(p_sigma)
+```
+
+```{python}
+print(flatmaps.shape)
+np.savetxt('/home/james/synthbeamdata/flats.txt', flatmaps[2,:,:], delimiter=',')
+np.savetxt('/home/james/synthbeamdata/az.txt', az, delimiter=',')
+np.savetxt('/home/james/synthbeamdata/el.txt', el, delimiter=',')
+```
+
+```{python}
+#might have to delete negative amps
+azrav = AZ.ravel()
+elrav = EL.ravel()
+azval = -8
+elval = 49
+testmap[testmap < 0] = 0
+testmaprav = testmap.ravel()
+submap = np.array([])
+subaz = np.array([])
+subel = np.array([])
+
+plt.figure(figsize=(10,20))
+plt.imshow(testmap.reshape(101,101), aspect='equal',
+        extent=[np.min(taz), np.max(taz), np.min(tel), np.max(tel)])
+plt.xticks(np.arange(-12, 12, step=1))
+plt.yticks(np.arange(45, 65, step=1))
+plt.grid(True)
+
+ret = 784
+for i, amp in enumerate(testmaprav):
+    #r = np.sqrt((azrav[i]-azval)**2 + (elrav[i]-elval)**2)
+    #print(i, amp, azrav[i], elrav[i], r)    
+    if abs(azval - azrav[i]) < 3.5 and abs(elval - elrav[i]) < 3.5:
+        print(i, amp, testmap.ravel()[i], azrav[i]-azval, elrav[i]-elval)
+        submap = np.append(submap, amp)
+        subaz = np.append(subaz, azrav[i])
+        subel = np.append(subel, elrav[i])
+        
+    if len(submap) >= ret:
+        print("FOUND 784")
+        break
+        
+        
+print(submap.shape, testmap.shape, subaz.shape, subel.shape)
+```
+
+```{python}
+print(submap.shape, subaz.shape, subel.shape)
+print(int(np.sqrt(submap.shape)))
+from scipy.interpolate import interp1d
+
+#smapint = interp1d(np.linspace(0,784,784), submap)
+
+submapmesh = submap.reshape(28,28)
+#submapsmesh = np.meshgrid(submap)
+#submapsmesh = np.unravel_index(submap)
+
+plt.figure(figsize=(10,20))
+plt.imshow(submapmesh, aspect='equal', 
+           extent=[np.min(subaz), np.max(subaz), np.min(subel), np.max(subel)])
+
+plt.figure(figsize=(10,20))
+plt.scatter(subaz, subel, c=submap, s=200, marker='s')
+```
+
+```{python}
+
+```

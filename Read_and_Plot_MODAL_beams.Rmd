@@ -1,0 +1,162 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+<!-- #region -->
+# Plot 64 MODAL beams and sum
+
+
+### points to a directory where the 64 MODAL .dat files are (and no other .dat files should be in this directory)
+<!-- #endregion -->
+
+```{python}
+import glob
+import numpy as np
+import scipy
+import scipy.constants                    # not automatically imported in line above
+import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize']=(13,13)    # increase size of inline figures
+import matplotlib.patches as patches
+```
+
+```{python}
+rep = "C:/Users/Créidhe/TES/"
+files = sorted(glob.glob(rep+'*.dat'))    # collect all .dat files in the directory above
+
+print (len(files))                          # should give 64 for the TD
+
+```
+
+```{python}
+freq=150  # frequency in GHz, not saved in file header so must specify here
+
+filename = files[0]
+
+with open(filename,'r') as f:            # using 'with' closes the file again after block
+    header_line = f.readline().strip()   # and strip out trailing newline
+    line1 = f.readline().strip()         # read first and secon data points line to calc nx. assumes = ny and that y cycles first
+    line2 = f.readline().strip()         # assuming square grid
+
+line1_details=line1.split()
+line2_details=line2.split()
+
+
+# calculate some stuff from header
+delta = (float(line2_details[1])-float(line2_details[0]))/1000  # subtract 2 y values to get spacing
+minmax=np.abs(float(line1_details[0]))/1000                     # max radius of focal plane   
+extent=2.0*minmax                                               # size of grid side in mm
+nx=int(round((extent/delta)+1) )                                     # no of points across grid
+ny=nx                                                           # assuming square here
+
+print ('sample spacing (m) =',delta )                             # in meters
+print ('max radius of data (m) =',minmax)
+print ('number of sample points =',nx)
+
+#pixelarea = extent/(nx-1)*extent/(nx-1)                         # in mm^2, assume square, use for power normalisation
+wavel = scipy.constants.speed_of_light/(freq*10**9)*1000        # wavelength in mm
+
+#print ('pixel area (mm^2) =',pixelarea)                         # only relevant if on fp
+print ('wavelength (mm) =',wavel)
+print ('frequency (GHz)=',freq)
+
+```
+
+### read in all 64 files
+
+```{python}
+allampX = np.zeros((64,ny,nx))
+allphiX = np.zeros((64,ny,nx))
+allampY = np.zeros((64,ny,nx))
+allphiY = np.zeros((64,ny,nx))
+
+allampXre = np.zeros((64,ny,nx))
+allampXim = np.zeros((64,ny,nx))
+allampYim = np.zeros((64,ny,nx))
+allampYre = np.zeros((64,ny,nx))
+
+
+maxX=0
+maxY=0
+
+#### Read the files
+for i in range(len(files)):
+    if i % 10 == 0: print(i)
+    data = np.loadtxt(files[i], skiprows=1)  # 1 row for MODAL files
+    allampX[i,:,:]=np.reshape(data[:,2],(ny,nx)) 
+    allampY[i,:,:]=np.reshape(data[:,4],(ny,nx))
+
+    allphiX[i,:,:]=np.reshape(data[:,3],(ny,nx))
+    allphiY[i,:,:]=np.reshape(data[:,5],(ny,nx))
+
+    maxXi=np.amax(allampX[i,:,:])
+    if (maxXi>maxX): maxX=maxXi    
+        
+    maxYi=np.amax(allampY[i,:,:])
+    if (maxYi>maxY): maxY=maxYi    
+
+print ('max_X, max_Y =',maxX, maxY)
+
+```
+
+```{python}
+TotalI= np.zeros((ny,nx))                             # total intensity
+
+Ax = allampX * (np.cos(allphiX) + 1j*np.sin(allphiX))  # real one
+Ay = allampY * (np.cos(allphiY) + 1j*np.sin(allphiY))
+
+sumampx=np.zeros((ny,nx),dtype='complex128') #all real
+sumampy=np.zeros((ny,nx),dtype='complex128') #all real
+
+for i in range(64):
+    sumampx+=Ax[i,:,:]
+    sumampy+=Ay[i,:,:]
+
+TotalI[:,:]=np.real(sumampx[:,:]*np.conjugate(sumampx[:,:]))+np.real(sumampy[:,:]*np.conjugate(sumampy[:,:]))  # imag part is zero anyway, taking real avoids warnings
+TTotalI=np.transpose(TotalI)   # MODAL layout, cycles through Y first
+
+
+```
+
+### Plot of total intensity 
+
+```{python}
+# plot total intensity vs pixel number 
+plt.figure()
+
+plt.imshow(TTotalI,origin='lower')
+plt.colorbar()
+
+plt.draw()
+plt.show()
+```
+
+```{python}
+### Plot of total intensity vs angle (degrees)
+```
+
+```{python}
+Xmin=Ymin=-np.arctan(minmax/12)*180.0/np.pi
+Xmax=Ymax=np.arctan(minmax/12)*180.0/np.pi
+
+fig=plt.figure()
+ax = fig.gca()
+ax.set_xticks(np.arange(-Xmin, Xmax),6.133)
+ax.set_yticks(np.arange(-Xmin, Xmax),6.133)
+extent = [Xmin, Xmax, Ymin, Ymax]
+plt.imshow(TTotalI, extent=extent, aspect = 'equal',origin='lower')   # NB  plot transpose for implot
+plt.grid(linestyle='dotted')
+plt.colorbar()
+
+plt.draw()
+plt.show()
+```

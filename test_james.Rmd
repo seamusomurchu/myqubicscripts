@@ -1,0 +1,284 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+# %matplotlib inline
+# #%matplotlib notebook
+import matplotlib.pyplot as plt
+from matplotlib import rc
+rc('figure', figsize=(15,8))
+rc('font', size=12)
+rc('text', usetex=False)
+rc('image', cmap='viridis')
+
+import healpy as hp
+import pickle
+import numpy as np
+
+import qubic.io
+from pysimulators import FitsArray
+import qubic.fibtools as ft
+import qubic.demodulation_lib as dl
+import qubic.sb_fitting as sbfit
+import jchinstrument as jcinst
+import os
+from scipy.stats import norm
+```
+
+```{python}
+def hall_pointing(az, el, angspeed_psi, maxpsi,
+                 date_obs=None, latitude=None, longitude=None,fix_azimuth=None,random_hwp=True):
+    #This method will reproduce the pointing that is used in the hall to take the data. Will start from bottom
+    #left and will go up at fixed elevation.
+    
+    #nsamples = 2*len(az)*len(el) # commented bucause not go and back
+    nsamples = len(az)*len(el)
+    #print('nsamples = ', nsamples)
+    pp = qubic.QubicSampling(nsamples,date_obs=date_obs, period=0.1, latitude=latitude,longitude=longitude)
+    
+    #Comented because we do not go and back in simulations.. 
+    #mult_el = []
+    #for eachEl in el:
+    #    mult_el.append(np.tile(eachEl, 2*len(az)))
+    # Azimuth go and back and same elevation. 
+    #az_back = az[::-1]
+    #az = list(az)
+    #az.extend(az_back)
+    #mult_az = np.tile(az, len(el))
+    #print(i,np.asarray(mult_el).ravel().shape)
+    #pp.elevation = np.asarray(mult_el).ravel()
+    #pp.azimuth = np.asarray(mult_az).ravel()
+    
+    mult_el = []
+    for eachEl in el:
+        mult_el.extend(np.tile(eachEl, len(az)))
+    mult_az = []
+    mult_az.append(np.tile(az, len(el)))
+    #print(len(mult_el))
+    pp.elevation = np.asarray(mult_el)#az2d.ravel()
+    pp.azimuth = np.asarray(mult_az[0])#el2d.ravel()
+    
+    ### scan psi as well,
+    pitch = pp.time * angspeed_psi
+    pitch = pitch % (4 * maxpsi)
+    mask = pitch > (2 * maxpsi)
+    pitch[mask] = -pitch[mask] + 4 * maxpsi
+    pitch -= maxpsi
+    
+    pp.pitch = pitch
+    
+    if random_hwp:
+        pp.angle_hwp = np.random.random_integers(0, 7, nsamples) * 11.25
+        
+    if fix_azimuth['apply']:
+        pp.fix_az=True
+        if fix_azimuth['fix_hwp']:
+            pp.angle_hwp=pp.pitch*0+ 11.25
+        if fix_azimuth['fix_pitch']:
+            pp.pitch= 0
+    else:
+        pp.fix_az=False
+
+    return pp
+    #print(pp.elevation)#, len(pp.elevation))
+
+```
+
+```{python}
+d = qubic.qubicdict.qubicDict()
+d.read_from_file('../../dicts/global_source_oneDet.dict')
+
+detnums = [93,]
+azmin = -15/np.cos(np.radians(50))
+azmax = 15/np.cos(np.radians(50))
+
+#where the data is
+#directory = '/home/martin/QUBIC/qubiccalibration/Data/Calib-TD/150GHz-2019-04-06/'
+#directory = '/home/james/QUBICdata/2020-03-16'
+#directory = '/home/james/synthbeamdata/150GHz-2019-04-06'
+directory = '/home/james/synthbeamdata/2020-03-16'
+### Make the TODs from the measured synthesized beams
+# Read azimuth and elevation
+
+_, az, el = sbfit.get_flatmap(detnums[0], directory, azmin=azmin, azmax=azmax)
+
+p = hall_pointing(az,el,0,0,fix_azimuth=d['fix_azimuth'])
+    
+```
+
+```{python}
+q = qubic.QubicInstrument(d)
+```
+
+```{python}
+s = qubic.QubicScene(d)
+
+```
+
+```{python}
+sb = q.get_synthbeam(s, idet = 37)
+print(np.shape(sb), type(sb))
+
+directory = '/home/james/synthbeamdata/2020-03-16'
+#directory = '/home/james/synthbeamdata/150GHz-2019-04-06'
+
+#hp.gnomview(sb, rot=[0,90], reso=10)
+hp.gnomview(sb, rot=[0,90], reso=10, cmap='jet',max=np.max(sb)/5,min=0)
+
+hpmap = sbfit.get_hpmap(37, directory)
+hp.gnomview(hpmap, reso=10, title='TES #{}'.format(37),cmap='jet',max=np.max(hpmap)/5,min=0)
+
+print(sb.shape, hpmap.shape)
+```
+
+```{python}
+print(sb.shape, hpmap.shape)
+```
+
+```{python}
+from pysimulators import FitsArray
+az = FitsArray('/home/james/synthbeamdata/azimuth.fits')
+el = FitsArray('/home/james/synthbeamdata/elevation.fits')
+print(az)
+```
+
+```{python}
+"""now for new data"""
+direct = '/home/james/synthbeamdata/2020-03-16'
+sb = q.get_synthbeam(s, idet = 37)
+print(np.shape(sb), type(sb))
+
+#hp.gnomview(sb, rot=[0,90], reso=10)
+hp.gnomview(sb, rot=[0,90], reso=10, cmap='jet',max=np.max(sb)/5,min=0)
+
+#hpmap = sbfit.get_hpmap(37, direct)
+#hp.gnomview(hpmap, reso=10, title='TES #{}'.format(37),cmap='jet',max=np.max(hpmap)/5,min=0)
+```
+
+```{python}
+from astropy.io import fits
+di = '/home/james/synthbeamdata/150GHz-2019-04-06/Flat/imgflat_TESNum_82.fits'
+di = '/home/james/synthbeamdata/150GHz-2019-04-06/Healpix/healpix_TESNum_115.fits'
+
+hdul = fits.open(di)
+hdul.info()
+hdul.close()
+print(hdul[1].header)
+print(len(hdul))
+#hdr = hdul[1].header
+#print(hdr)
+```
+
+```{python}
+from pysimulators import FitsArray
+hpmap = FitsArray('/home/james/synthbeamdata/2020-03-16/Healpix/healpix_TESNum_115.fits')
+print(hpmap.shape)
+hp.gnomview(hpmap, reso=10, title='TES #{}'.format(115),cmap='jet',max=np.max(hpmap)/5,min=0)
+```
+
+```{python}
+import matplotlib.pyplot as plt
+elmin=35
+elmax=65
+mapdata2 = FitsArray('/home/james/synthbeamdata/2020-03-16/Flat/imgflat_TESNum_96.fits')
+plt.imshow(-mapdata2, aspect='equal',
+           extent=[np.cos(np.radians(50))*azmin, np.cos(np.radians(50))*azmax, elmin, elmax])
+```
+
+```{python}
+def scan2hpmapjames(ns, azdeg, eldeg, data):
+    coadd = np.zeros(12 * ns ** 2)
+    count = np.zeros(12 * ns ** 2)
+    ip = hp.ang2pix(ns, np.pi / 2 - np.radians(eldeg), np.radians(azdeg))
+    print(ip.shape, data.shape)
+    for i in range(len(azdeg)):
+        coadd[ip[i]] += data[i]
+        count[ip[i]] += 1
+    ok = count != 0
+    sbmap = np.zeros(12 * ns ** 2)
+    sbmap[ok] = coadd[ok] / count[ok]
+    mm, ss = ft.meancut(sbmap[ok], 3)
+    sbmap[ok] -= mm
+    sbmap[~ok] = 0
+    return sbmap
+```
+
+```{python}
+from qubic.demodulation_lib import scan2hpmap
+
+print(len(mapdata2[0]))
+
+el = np.linspace(35, 65, len(mapdata2[0]), dtype=float)
+az = np.linspace(-15,15, len(mapdata2[1]), dtype=float)
+
+
+hpmap = scan2hpmapjames(len(mapdata2[0]), np.cos(np.radians(50))*az, np.radians(el), mapdata2.ravel())
+hp.gnomview(hpmap, reso=10, title='TES #{}'.format(96),cmap='jet',max=np.max(hpmap)/5,min=0)
+hp.mollview(hpmap)
+```
+
+```{python}
+import healpy as hp
+NSIDE = 32
+print(
+    "Approximate resolution at NSIDE {} is {:.2} deg".format(
+        NSIDE, hp.nside2resol(NSIDE, arcmin=True) / 60
+    )
+)
+NPIX = hp.nside2npix(NSIDE)
+print(NPIX)
+m = np.arange(NPIX)
+print(m.shape, m[0])
+hp.mollview(m, title="Mollview image RING")
+hp.graticule()
+vec = hp.ang2vec(np.pi / 2, np.pi * 3 / 4)
+print(vec)
+
+```
+
+```{python}
+from pysimulators import FitsArray
+az = FitsArray('/home/james/synthbeamdata/2020-03-16/azimuth.fits')
+el = FitsArray('/home/james/synthbeamdata/2020-03-16/elevation.fits')
+print(az.shape)
+```
+
+```{python}
+# dirfreq = '150GHz-2019-04-06/'
+# dirallfreqs = '/Users/hamilton/Google Drive/QUBIC/Calib-TD/Files/Synthesized Beams/Synthesized_Beams_Files/'
+# dirfiles = dirallfreqs + dirfreq
+dirfile = '/home/james/synthbeamdata/2020-03-16'
+
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+
+
+TESNum = 93
+# reload(sbfit)
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+print(flatmap.shape)
+
+plt.subplot(1,2,1)
+plt.imshow(flatmap,
+       extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)], aspect='equal')#,
+      #vmin=-3000, vmax=3000)
+plt.subplot(1,2,2)
+plt.imshow(flatmap, aspect='equal')
+```
+
+```{python}
+"""find peaks as before"""
+```

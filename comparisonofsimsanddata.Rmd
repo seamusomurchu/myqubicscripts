@@ -1,0 +1,509 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+#import sys
+#sys.path.append('/home/james/multifrequency/')
+#from CSFPA_dataIO import *
+import matplotlib.pyplot as plt
+import qubic.sb_fitting as sbfit
+import scipy.optimize as opt
+
+def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    x, y = xdatatuple
+    xo = float(xo)
+    yo = float(yo)    
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = offset + amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))
+    return g.ravel()
+```
+
+```{python}
+expkl = '/home/james/FIgraspFiles/pklrep150/FPA_objs_FP_planar_grid_horn100_150_GHz_Mstyle.pkl'
+MagXarr, PhaXarr, ReXarr, ImXarr, MagYarr, PhaYarr, ReYarr, ImYarr, vtxcntarr, PixCenX, PixCenY, IntX, IntY, IntT, Ix, Iy, IT, xycoords, filename, freq = RetrieveVars(expkl)
+for i in range(len(PixCenX)):
+    print(i+1, PixCenX[i]*1000, PixCenY[i]*1000)
+```
+
+```{python}
+data = np.loadtxt('/home/james/TESonsky/TES93/psf.dat', skiprows=1)
+data = data.T
+```
+
+```{python}
+plt.figure(figsize=(12,12))
+plt.scatter(data[0], data[1], c=data[2])
+plt.show()
+```
+
+```{python}
+
+```
+
+```{python}
+dirfile = '/home/james/synthbeamdata/2020-03-16'
+dirfile = '/home/james/synthbeamdata/150GHz-2019-04-06'
+
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+
+
+TESNum = 93
+# reload(sbfit)
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+#flatmap = flatmap*-1
+print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+#print(az)
+#print(AZ)
+
+plt.figure(figsize=(12,16))
+plt.subplot(1,3,1)
+plt.imshow(flatmap, origin='lower')#,
+       #extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)], aspect='equal')#,
+      #vmin=-3000, vmax=3000)
+    
+plt.subplot(1,3,2)
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+
+initial_guess = (518150,6,51,3,3,0,0)
+initial_guess = (6146515,  6, 56, 2,  2,  0,0)
+
+popt, pcov = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmap.ravel(), p0=initial_guess)
+data_fitted = twoD_Gaussian((AZ, EL), *popt)
+
+print(data_fitted.shape)
+
+
+plt.subplot(1,3,3)
+plt.imshow(flatmap, aspect='equal', origin='lower',
+    extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.colorbar()
+#plt.contour( AZ, EL, data_fitted.reshape(51,51), 3, colors='k')
+line1x = [2.5,12]
+line1y = [55, 55]
+plt.plot( line1x, line1y, 'r-')
+#plt.plot(xypeaks[0], xypeaks[1], 'b.')
+print(popt)
+```
+
+```{python}
+#### Instantiate a model
+TESNum=93
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=False)
+
+fit, xypeaks = sbfit.fit_sb(flatmap, az, el, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+```
+
+```{python}
+plt.figure()
+plt.imshow(flatmap, aspect='equal',
+    extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.plot(xypeaks[0], xypeaks[1], 'r.')
+plt.show()
+
+plt.figure()
+plt.scatter(data[0], data[1]+50, c=data[2])
+plt.axis([np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+#plt.axis('equal')
+plt.plot(xypeaks[0], xypeaks[1], 'r.')
+```
+
+```{python}
+print(np.min(AZ)*c50, np.max(AZ)*c50)
+
+print(max(data[1]), min(data[1]))
+print(max(el)-50, min(el)-50)
+```
+
+```{python}
+psflist = np.array([6, 37, 50, 58, 76, 93])
+dirfile = '/home/james/synthbeamdata/2020-03-16'
+dirfile = '/home/james/synthbeamdata/150GHz-2019-04-06'
+
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+
+flatmaps = np.zeros([6, 144, 182])
+for i, tes in enumerate(psflist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    print(tes, i, flatmap.shape, flatmap[0].shape)
+    flatmaps[i, :, :] = flatmap
+```
+
+```{python}
+print(flatmaps.shape, az.shape, el.shape, xypeaks.shape)
+```
+
+```{python}
+"""make fits for each flatmap"""
+#make model
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=False)
+peaks = np.zeros([6,4,9])
+for i, tes in enumerate(psflist):
+
+    fit, xypeaks = sbfit.fit_sb(flatmaps[i,:,:], az, el, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    peaks[i,:,:] = xypeaks
+```
+
+```{python}
+"""plot peaks on flatmaps"""
+
+plt.figure(figsize=(10,10))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Flatmap TES {}'.format(tes))
+```
+
+```{python}
+"""load and plot simulation data"""
+psfdata = np.zeros([6, 3, 251001])
+for i, tes in enumerate(psflist):
+    data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
+    psfdata[i,:,:] = data.T
+```
+
+```{python}
+print(psfdata.shape)
+
+```
+
+```{python}
+"""do a plot of sim data with fitted peaks from inst data"""
+
+plt.figure(figsize=(10,10))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+    plt.axis('equal')
+    plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Sim data TES {}'.format(tes))
+```
+
+```{python}
+
+```
+
+```{python}
+"""do a plot of sim data with fitted peaks from inst data
+
+but now use new dataset"""
+dirfile = '/home/james/synthbeamdata/2020-03-16'
+#dirfile = '/home/james/synthbeamdata/150GHz-2019-04-06'
+
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+
+flatmaps = np.zeros([6, 51, 51])
+for i, tes in enumerate(psflist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    #print(tes, i, flatmap.shape, flatmap[0].shape)
+    flatmap=flatmap*-1.0
+    flatmaps[i, :, :] = flatmap
+    
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=False)
+peaks = np.zeros([6,4,9])
+for i, tes in enumerate(psflist):
+
+    fit, xypeaks = sbfit.fit_sb(flatmaps[i,:,:], az, el, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    peaks[i,:,:] = xypeaks
+    
+plt.figure(figsize=(10,10))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Flatmap TES {}'.format(tes))    
+plt.colorbar()
+    
+plt.figure(figsize=(10,10))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+    plt.axis('equal')
+    plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Sim data TES {}'.format(tes))
+```
+
+```{python}
+"""plot old data peaks on new data peaks
+also plot simulation peaks on new data peaks
+also plot psf pixels on focal plane
+maybe these pixels dont correspond to ghosts
+so choose some ghosts
+see if ghost peaks compare in new and old data
+check of new data made okay -15 c50 etc."""
+```
+
+```{python}
+
+
+plt.figure(figsize=(10,10))
+#plt.plot(PixCenX, PixCenY, marker='s', lw=0, color='k')
+plt.plot(PixCenX[496:744], PixCenY[496:744], marker='s', lw=0)
+# plt.plot(PixCenX[235+496], PixCenY[235+496], marker='s', lw=0, color='r', label='93')
+# plt.plot(PixCenX[124+496], PixCenY[124+496], marker='s', lw=0, color='m', label='37')
+# plt.plot(PixCenX[157+496], PixCenY[157+496], marker='s', lw=0, color='g', label='50')
+# plt.plot(PixCenX[12+496], PixCenY[12+496], marker='s', lw=0, color='c', label='58')
+# plt.plot(PixCenX[219+496], PixCenY[219+496], marker='s', lw=0, color='k', label='76')
+# plt.plot(PixCenX[11+496], PixCenY[11+496], marker='s', lw=0, color='y', label='6')
+plt.plot(-41.1/1000, -32.4/1000, marker='s', lw=0, color='y',label='6')
+plt.plot(-35.4/1000, -23.4/1000, marker='s', lw=0, color='m',label='37')
+plt.plot(-29.4/1000, -17.4/1000, marker='s', lw=0, color='g',label='50')
+plt.plot(-11.4/1000, -8.4/1000, marker='s', lw=0, color='c',label='58')
+plt.plot(-14.4/1000, -5.4/1000, marker='s', lw=0, color='k',label='76')
+plt.plot(-11.4/1000, -2.4/1000, marker='s', lw=0, color='r',label='93')
+plt.axis('equal')
+plt.legend()
+```
+
+```{python}
+import qubicpack.pix2tes as px
+```
+
+```{python}
+px.tes2pix(93, asic=1)
+px.tes2pix(37, asic=1)
+px.tes2pix(50, asic=1)
+px.tes2pix(58, asic=2)
+px.tes2pix(76, asic=1)
+px.tes2pix(6, asic=2)
+```
+
+```{python}
+"""make pdf plot like JC"""
+plt.rc('figure',figsize=(16,8))
+nnx = 4
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+dirfilen = '/home/james/synthbeamdata/2020-03-16'
+dirfileo = '/home/james/synthbeamdata/150GHz-2019-04-06'
+
+
+
+for i in range(256):
+    flatmapo, az, el = sbfit.get_flatmap(i+1, dirfileo, azmin = azmin, azmax=azmax)
+    flatmapn, az, el = sbfit.get_flatmap(i+1, dirfilen, azmin = azmin, azmax=azmax)
+    
+    plt.figure(figsize=(16,8))
+    plt.subplot(1,2,1)
+    plt.imshow(flatmapo, aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.title('Old data TES {}'.format(i+1))
+    
+    plt.subplot(1,2,2)
+    plt.imshow(flatmapn*-1.0, aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.title('New data TES {}'.format(i+1))
+    
+    plt.tight_layout()
+    plt.show()
+```
+
+```{python}
+complist = [9, 16, 22, 24, 27, 50, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+    170, 171, 172, 181, 186, 201, 208, 210, 213, 216, 218, 219]
+print(len(complist))
+psflist = np.array([6, 37, 50, 58, 76, 93])
+print(psfdata.shape)
+```
+
+```{python}
+#initialise old data for fitting model
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=False, no_xy_shift=False, distortion=True)
+oldpeaks = np.zeros([6,4,9])
+chiarrold = np.array([])
+
+oldflatmaps = np.zeros([6, 144, 182])
+dirfileo = '/home/james/synthbeamdata/150GHz-2019-04-06'
+for i, tes in enumerate(psflist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfileo, azmin = azmin, azmax=azmax)
+    #print(tes, i, flatmap.shape, flatmap[0].shape)
+    #flatmap=flatmap*-1.0
+    oldflatmaps[i, :, :] = flatmap
+    
+for i, tes in enumerate(psflist):
+
+    fit, xypeaks = sbfit.fit_sb(oldflatmaps[i,:,:], az, el, sbfitmodel3, verbose=True, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    oldpeaks[i,:,:] = xypeaks
+    chiarrold = np.append(chiarrold, fit[4])
+```
+
+```{python}
+#fit peaks to "new" data
+dirfilen = '/home/james/synthbeamdata/2020-03-16'
+newpeaks = np.zeros([6,4,9])
+flatmaps = np.zeros([6, 51, 51])
+chiarrnew = np.array([])
+
+for i, tes in enumerate(psflist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfilen, azmin = azmin, azmax=azmax)
+    #print(tes, i, flatmap.shape, flatmap[0].shape)
+    flatmap=flatmap*-1.0
+    flatmap = np.flip(flatmap)
+    flatmaps[i, :, :] = flatmap
+    
+for i, tes in enumerate(psflist):
+
+    fit, xypeaks = sbfit.fit_sb(flatmaps[i,:,:], az, el, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    newpeaks[i,:,:] = xypeaks
+    chiarrnew = np.append(chiarrnew, fit[4])
+```
+
+```{python}
+#plot fits on data and simulation
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+
+for i, tes in enumerate(psflist):
+    #load the instrument flatmaps
+#     flatmapo, az, el = sbfit.get_flatmap(tes, dirfileo, azmin = azmin, azmax=azmax)
+#     flatmapn, az, el = sbfit.get_flatmap(tes, dirfilen, azmin = azmin, azmax=azmax)
+    #do fits on data
+    #they already exist for new data as 'peaks'
+    #plot old and new data
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,3,1)
+    plt.imshow(oldflatmaps[i,:,:], aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.plot(oldpeaks[i, 0, :], oldpeaks[i, 1, :], 'b.')
+    plt.title('Old data TES {}'.format(tes))
+    plt.text(2.5,60, r"$\chi^2 = {:06.2E}$".format(chiarrold[i]), fontdict=font)
+    
+    plt.subplot(1,3,2)
+    plt.imshow(flatmaps[i,:,:], aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.plot(newpeaks[i, 0, :], newpeaks[i, 1, :], 'r.')
+    plt.title('New data TES {}'.format(tes))
+    plt.text(2.5,60, r"$\chi^2 = {:06.2E}$".format(chiarrnew[i]), fontdict=font)
+    
+    #plot the psf simulation model
+    plt.subplot(1,3,3)
+    plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+    plt.axis('equal')
+    plt.plot(oldpeaks[i, 0, :], oldpeaks[i, 1, :], 'b.')
+    plt.plot(newpeaks[i, 0, :], newpeaks[i, 1, :], 'r.')
+    plt.title('Sim data TES {}'.format(tes))
+    plt.axis([np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    
+    plt.tight_layout()
+plt.savefig('/home/james/Pictures/foo.png', bbox_inches='tight')
+plt.show()
+```
+
+```{python}
+
+```
+
+```{python}
+tes=58
+flatmapo, az, el = sbfit.get_flatmap(tes, dirfileo, azmin = azmin, azmax=azmax)
+flatmapn, az, el = sbfit.get_flatmap(tes, dirfilen, azmin = azmin, azmax=azmax)
+#try to flip th flatmap
+fmap = flatmapn*-1.0
+fmap = np.flip(fmap)
+#fit the flip
+fit, flippeaks = sbfit.fit_sb(fmap, az, el, sbfitmodel3, verbose=False, resample=False, 
+                    doplot=False, extra_title='TES #{}'.format(TESNum))
+
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 12,
+        }
+```
+
+```{python}
+#test the image flipping
+#do fits on data
+#they already exist for new data as 'peaks'
+#plot old and new data
+plt.figure(figsize=(16,6))
+plt.subplot(1,4,1)
+plt.imshow(flatmapo, aspect='equal',
+    extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.plot(oldpeaks[3, 0, :], oldpeaks[3, 1, :], 'b.')
+plt.title('Old data TES {}'.format(tes))
+plt.text(0,62, r"$\chi^2 = {:06.2E}$".format(chiarrold[3]), fontdict=font)
+
+plt.subplot(1,4,2)
+plt.imshow(flatmapn*-1.0, aspect='equal',
+    extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.plot(newpeaks[3, 0, :], newpeaks[3, 1, :], 'r.')
+plt.title('New data TES {}'.format(tes))
+plt.text(0,62, r"$\chi^2 = {:06.2E}$".format(chiarrnew[3]), fontdict=font)
+
+#testplot
+plt.subplot(1,4,3)
+plt.imshow(fmap, aspect='equal',
+    extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.plot(flippeaks[0], flippeaks[1], 'k.')
+plt.title('Flip TES {}'.format(tes))
+#plt.text(2.5,60, r"$\chi^2 = {:06.2E}$".format(chiarrnew[3]), fontdict=font)
+
+#plot the psf simulation model
+plt.subplot(1,4,4)
+plt.scatter(psfdata[3,0,:], psfdata[3,1,:]+50, c=psfdata[i,2,:])
+plt.axis('equal')
+plt.plot(oldpeaks[3, 0, :], oldpeaks[3, 1, :], 'b.')
+plt.plot(newpeaks[3, 0, :], newpeaks[3, 1, :], 'r.')
+plt.plot(flippeaks[0], flippeaks[1], 'k.')
+plt.title('Sim data TES {}'.format(tes))
+plt.axis([np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+```
+
+```{python}
+testfit, testxypeaks = sbfit.fit_sb(flatmapn, az, el, sbfitmodel3, verbose=True, resample=False, 
+                    doplot=False, extra_title='TES #{}'.format(6))
+```
+
+```{python}
+# print(testfit[4])
+# print(testxypeaks)
+print(flatmapo.shape)
+fmap = flatmapo*-1.0
+fmap = np.flip(fmap)
+print(fmap.shape)
+```
+
+```{python}
+
+```

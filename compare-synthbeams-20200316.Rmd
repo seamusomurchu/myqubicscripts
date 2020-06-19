@@ -1,0 +1,792 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+# ##### %matplotlib notebook
+# %matplotlib inline
+from matplotlib import rc
+rc('figure',figsize=(16,4))
+rc('font',size=12)
+rc('text',usetex=False)
+rc('image', cmap='viridis')
+
+from qubicpack import qubicpack as qp
+import qubic.fibtools as ft
+import qubic.plotters as p
+import qubic.lin_lib as ll
+import qubic.demodulation_lib as dl
+import qubic.io
+import qubic.sb_fitting as sbfit
+import qubic.selfcal_lib as sclib
+
+from pysimulators import FitsArray
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import scipy.ndimage.filters as f
+import glob
+import string
+import scipy.signal as scsig
+from scipy import interpolate
+import os
+import healpy as hp
+import pandas as pd
+from importlib import reload
+import math
+import scipy.optimize as opt
+
+def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    x, y = xdatatuple
+    xo = float(xo)
+    yo = float(yo)    
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = offset + amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))
+    return g.ravel()
+```
+
+```{python}
+#dirfreq = '150GHz-2019-04-06/'
+dirallfreqs = '/home/james/synthbeamdata/2020-03-16/'
+dirfiles = dirallfreqs
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+
+print(dirfiles)
+
+TESNum = 93
+
+hpmap = sbfit.get_hpmap(TESNum, dirfiles)
+hp.mollview(hpmap)
+hp.gnomview(hpmap, reso=10, title='TES #{}'.format(TESNum),cmap='jet',max=np.max(hpmap)/5,min=0)
+pixok = hpmap != 0
+npixok = np.sum(pixok)
+print(hpmap.shape, type(hpmap), len(np.unique(hpmap)))
+```
+
+```{python}
+"""load all maps and add"""
+dirfile = '/home/james/synthbeamdata/2020-03-16'
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+maps = np.zeros((256, len(flatmap), len(flatmap)))
+print(maps.shape, flatmap.shape)
+for tes in range(1, 257):
+    
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    print(flatmap.shape, tes, maps[tes-1,:, :].shape)
+    maps[tes-1,:, :] = np.append(maps[tes-1,:, :], (flatmap[0], flatmap[1]), axis=1)
+```
+
+```{python}
+""" load flatmap"""
+dirfile = '/home/james/synthbeamdata/2020-03-16'
+
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+
+
+TESNum = 93
+# reload(sbfit)
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+flatmap = flatmap*-1
+print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+#print(az)
+#print(AZ)
+
+#plt.figure(figsize=(12,16))
+plt.subplot(1,3,1)
+plt.imshow(flatmap, origin='lower')#,
+       #extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)], aspect='equal')#,
+      #vmin=-3000, vmax=3000)
+    
+plt.subplot(1,3,2)
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+
+initial_guess = (518150,6,51,3,3,0,0)
+initial_guess = (6146515,  6, 56, 2,  2,  0,0)
+
+popt, pcov = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmap.ravel(), p0=initial_guess)
+data_fitted = twoD_Gaussian((AZ, EL), *popt)
+
+print(data_fitted.shape)
+
+
+plt.subplot(1,3,3)
+plt.imshow(flatmap, aspect='equal', origin='lower',
+    extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.colorbar()
+plt.contour( AZ, EL, data_fitted.reshape(51,51), 3, colors='k')
+line1x = [2.5,12]
+line1y = [55, 55]
+plt.plot( line1x, line1y, 'r-')
+plt.plot(xypeaks[0], xypeaks[1], 'b.')
+print(popt)
+#print(pcov)
+```
+
+```{python}
+TESNum = 93
+# reload(sbfit)
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+flatmap = flatmap*-1
+npix = len(np.ravel(flatmap))
+print(flatmap.shape, max(flatmap.ravel()))
+az = np.linspace(0, 50, 51)
+el = np.linspace(0,50,51)
+
+x, y = np.meshgrid(az, el)
+
+plt.subplot(1,3,1)
+plt.imshow(flatmap, aspect='equal')
+
+initial_guess = (6146515,25,30,3,3,0,0)
+initial_guess = (6146515,  25, 30, 2,  2,  3.44445665e+06, -6.06942641e+04)
+popt, pcov = opt.curve_fit(twoD_Gaussian, (x, y), flatmap.ravel(), p0=initial_guess)
+print(popt)
+data_fitted = twoD_Gaussian((x, y), *popt)
+
+plt.contour(x, y, data_fitted.reshape(51, 51), 5, colors='k')
+
+```
+
+```{python}
+#### Instantiate a model
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=False)
+
+fit, xypeaks = sbfit.fit_sb(flatmap, az, el, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+
+
+```
+
+```{python}
+print( xypeaks[0], xypeaks[1])
+plt.imshow(flatmap, aspect='equal',
+    extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.plot(xypeaks[0], xypeaks[1], 'r.')
+```
+
+```{python}
+
+```
+
+```{python}
+npix=512
+myimage = hp.gnomview(hpmap, reso=10*200./npix, title='TES #{}'.format(TESNum),cmap='jet',max=np.max(hpmap)/5,min=0, return_projected_map=True,xsize=npix, no_plot=True)
+imshow(myimage)
+print(myimage.shape, max(myimage.ravel()))
+import scipy.optimize as opt
+def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    x, y = xdatatuple
+    xo = float(xo)
+    yo = float(yo)    
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = offset + amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))
+    return g.ravel()
+
+# Create x and y indices
+x = np.linspace(0, 511, 512)
+y = np.linspace(0, 511, 512)
+x, y = np.meshgrid(x, y)
+print("x val in meshgrid shape", x.shape)
+
+# add some noise to the data and try to fit the data generated beforehand
+#initial_guess = (2789871,250,270,40,40,0,0)
+#initial_guess = (2789871,50,300,40,40,0,0)
+initial_guess = (2789871,350,170,40,40,0,0)
+
+
+popt, pcov = opt.curve_fit(twoD_Gaussian, (x, y), myimage.ravel(), p0=initial_guess)
+
+data_fitted = twoD_Gaussian((x, y), *popt)
+
+fig, ax = subplots(1, 1, figsize=(10,10))
+#ax.hold(True)
+ax.imshow(myimage, cmap=cm.jet, origin='bottom',
+    extent=(x.min(), x.max(), y.min(), y.max()))
+ax.contour(x, y, data_fitted.reshape(512, 512), 8, colors='w')
+show()
+```
+
+```{python}
+import scipy.optimize as opt
+def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    x, y = xdatatuple
+    xo = float(xo)
+    yo = float(yo)    
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = offset + amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))
+    return g.ravel()
+
+# Create x and y indices
+x = np.linspace(0, 200, 201)
+y = np.linspace(0, 200, 201)
+x, y = np.meshgrid(x, y)
+print("x val in meshgrid shape", x.shape)
+#create data
+data = twoD_Gaussian((x, y), 3, 100, 100, 20, 40, 0, 10)
+print("data shape (z)", data.shape)
+# plot twoD_Gaussian data generated above
+plt.figure()
+plt.imshow(data.reshape(201, 201))
+plt.colorbar()
+
+# add some noise to the data and try to fit the data generated beforehand
+initial_guess = (3,100,100,20,40,0,10)
+
+data_noisy = data + 0.2*np.random.normal(size=data.shape)
+
+popt, pcov = opt.curve_fit(twoD_Gaussian, (x, y), data_noisy, p0=initial_guess)
+
+data_fitted = twoD_Gaussian((x, y), *popt)
+
+fig, ax = plt.subplots(1, 1)
+#ax.hold(True)
+ax.imshow(data_noisy.reshape(201, 201), cmap=plt.cm.jet, origin='bottom',
+    extent=(x.min(), x.max(), y.min(), y.max()))
+ax.contour(x, y, data_fitted.reshape(201, 201), 8, colors='w')
+plt.show()
+```
+
+```{python}
+from glob import glob
+freqfiles = glob(dirallfreqs+"/*/")
+
+c50 = np.cos(np.radians(50))
+azmin = -15./c50
+azmax = 15./c50
+
+freqs = ['130', '140', '150', '160', '170']
+TESNum = 96
+#TESNum = 93 #try now
+freq = 130
+npix=512
+
+rxval = np.linspace(0, 511, 512, dtype='int')
+
+cuts = np.ones(512)
+
+for file in freqfiles:
+    
+    #print(file)
+    hpmap = sbfit.get_hpmap(TESNum, file)
+    #hp.gnomview(hpmap, reso=10, title='TES #{}, Freq {} GHz'.format(TESNum, freq),cmap='jet',max=np.max(hpmap)/5,min=0)
+    
+    pixok = hpmap != 0
+    npixok = np.sum(pixok)
+    
+    myimage = hp.gnomview(hpmap, reso=10*200./npix, title='TES #{}'.format(TESNum),cmap='jet',max=np.max(hpmap)/5,min=0, return_projected_map=True,xsize=npix, no_plot=True)
+
+    %matplotlib qt
+    figure(figsize=(10,10))
+    imshow(myimage, origin='lower',vmin=-10000,vmax=10000)
+    title('TES #{}, freq {} GHz'.format(TESNum, freq))
+    colorbar()
+    cen, xy1, xy2 = ginput(3)
+    %matplotlib inline
+
+    #get slope and y intercept
+    dx = xy2[0] - xy1[0]
+    dy = xy2[1] - xy1[1]
+    a = dy/dx
+    b = cen[1] - cen[0]*a
+    print("slope: {}, y intercept: {}".format(a, b))
+    
+    theta = math.degrees(math.atan(dy/dx))
+    
+    #yvals = (rxval)*math.tan(math.radians(theta))
+    yvals = (rxval)*a + b      #y=mx+c
+    yvals = yvals.astype(int)
+    yvals = np.where(yvals<=511, yvals, 511)
+    #print(yvals)
+    
+    #plot(myimage[xvals,yvals],'.')
+    cuts = np.vstack((cuts, myimage[rxval,yvals]))
+    
+    freq = freq+10
+    
+print(cuts.shape)
+cuts = cuts[1:6,:]
+print(cuts.shape)
+```
+
+```{python}
+figure(figsize=(14,6))
+imshow(myimage, origin='lower',vmin=-10000,vmax=10000)
+plot(rxval,yvals,'r')
+plot(rxval,yvals-int(b),'k')
+plot(232,257, 'm.', markersize=10, alpha=0.5)
+#plot(myimage[:,yvals],'b')
+theta = math.degrees(math.atan(dy/dx))
+y = (320)*math.tan(math.radians(theta))
+print(y, y+b, a*232+b)
+plot(320, a*320+b, 'k.', markersize=10, alpha=0.5)
+colorbar()
+#print(myimage[:,0].shape)
+#print(yvals)
+figure()
+plot(myimage[:,yvals-int(b)],'k.')
+plot(myimage[:,yvals],'r.')
+#print(np.where(myimage[:,0]>100), myimage)
+print(myimage[232,257])
+
+print(myimage[rxval, yvals])
+
+```
+
+```{python}
+# #print(myimage.shape)
+# #rxval = np.linspace(0, 512, 512, dtype='int')
+# yvals = (rxval)*math.tan(math.radians(theta))
+# yvals = yvals.astype(int)
+# #print(yvals)
+# yvals = np.where(yvals<=511, yvals, 511)
+# #print(yvals)
+```
+
+```{python}
+xdeg = np.linspace(-25,25,512)
+
+figure(figsize=(16,6))
+subplot(1,2,1)
+plot(xdeg, cuts[0], 'r.')
+plot(xdeg, cuts[1], 'b.')
+plot(xdeg, cuts[2], 'g.')
+plot(xdeg, cuts[3], 'm.')
+plot(xdeg, cuts[4], 'c.')
+
+subplot(1,2,2)
+plot(cuts[0], 'r.')
+plot(cuts[1], 'b.')
+plot(cuts[2], 'g.')
+plot(cuts[3], 'm.')
+plot(cuts[4], 'c.')
+
+```
+
+```{python}
+from scipy.optimize import curve_fit
+
+def func(x, *params):
+    y = np.zeros_like(x)
+    for i in range(0, len(params), 3):
+        ctr = params[i]
+        amp = params[i+1]
+        wid = params[i+2]
+        #print("centre {}, amp {}, width {}".format(ctr, amp, wid))
+        y = y + amp * np.exp( -((x - ctr)/wid)**2)
+    return y
+
+guess = [50, 2000, 17, 210, 20000, 17, 350, 6000, 17]
+
+# for i in range(3):
+#     guess += [60+80*i, 10000, 20]
+    
+popt, pcov = curve_fit(func, rxval, cuts[1], p0=guess, maxfev=20000)
+fit = func(rxval, *popt)
+
+plot(cuts[1], '.')
+plot(fit,  'r-')
+show()
+print("popt", popt)
+print("pcov", pcov)
+```
+
+```{python}
+print(cuts[:,0].shape)
+cutarr = np.linspace(0, 4, 5)
+cutarr = cutarr.astype('int')
+print(cutarr)
+#guess = [210, 18000, 60, 310, 8000, 60, 350, 6000, 20] #these guess work for TES 96
+#guess = [75, 30000, 60, 200, 40000, 80, 350, 30000, 60]
+guess = [50, 2000, 17, 210, 20000, 17, 350, 6000, 17]
+fits = np.ones(512)
+
+#initial an array to append popt params for fitting
+poptarr = np.ones(len(guess))
+
+for i in cutarr:
+        
+    popt, pcov = curve_fit(func, rxval, cuts[i], p0=guess, maxfev=40000)
+    poptarr = np.vstack((poptarr,popt))
+    fit = func(rxval, *popt)
+    fits = np.vstack((fits, fit))
+    
+    
+
+fits = fits[1:6,:]
+poptarr = poptarr[1:6,:]
+print(fits.shape)
+print(popt.shape, popt)
+```
+
+```{python}
+figure(figsize=(10,8))
+plot(xdeg[30:490], cuts[0][30:490], 'r.', label='Inst data 130')
+plot(xdeg[30:490], fits[0][30:490], 'r', label ='Fit 130')
+plot(xdeg[30:490], cuts[1][30:490], 'b.', label='Inst data 140')
+plot(xdeg[30:490], fits[1][30:490], 'b', label ='Fit 140')
+plot(xdeg[30:490], cuts[2][30:490], 'g.', label='Inst data 150')
+plot(xdeg[30:490], fits[2][30:490], 'g', label ='Fit 150')
+# plot(xdeg[30:490], cuts[3][30:490], 'm.', label='Inst data 160')
+# plot(xdeg[30:490], fits[3][30:490], 'm', label ='Fit 160')
+plot(xdeg[30:490], cuts[4][30:490], 'c.', label='Inst data 170')
+plot(xdeg[30:490], fits[4][30:490], 'c', label ='Fit 170')
+legend(loc='best')
+```
+
+```{python}
+import matplotlib.pyplot as plt
+from scipy import optimize
+
+def gaussian(x, height, center, width, offset):
+    return height*np.exp(-(x - center)**2/(2*width**2)) + offset
+def three_gaussians(x, h1, c1, w1, h2, c2, w2, h3, c3, w3, offset):
+    return (gaussian(x, h1, c1, w1, offset=0) +
+        gaussian(x, h2, c2, w2, offset=0) +
+        gaussian(x, h3, c3, w3, offset=0) + offset)
+def two_gaussians(x, h1, c1, w1, h2, c2, w2, offset):
+    return three_gaussians(x, h1, c1, w1, h2, c2, w2, 0,0,1, offset)
+
+errfunc3 = lambda p, x, y: (three_gaussians(x, *p) - y)**2
+errfunc2 = lambda p, x, y: (two_gaussians(x, *p) - y)**2
+
+guess3 = [15000, 95, 17, 60000, 210, 60,15000, 350, 35, 0]  # I guess there are 3 peaks, 2 are clear, but between them there seems to be another one, based on the change in slope smoothness there
+guess2 = [5000, 95, 17, 60000, 210, 60, 0]  # I removed the peak I'm not too sure about
+optim3, success = optimize.leastsq(errfunc3, guess3[:], args=(xvals,cuts[4]))
+optim2, success = optimize.leastsq(errfunc2, guess2[:], args=(xvals,cuts[4]))
+
+print(optim3)
+
+plt.plot(xvals, cuts[4], c='g', label='measurement')
+plt.plot(xvals, three_gaussians(cuts[4], *optim3),
+    c='b', label='fit of 3 Gaussians')
+plt.plot(xvals, two_gaussians(cuts[4], *optim2),
+    lw=1, c='r', ls='--', label='fit of 2 Gaussians')
+plt.legend(loc='best')
+plt.savefig('result.png')
+```
+
+```{python}
+hpmap = sbfit.get_hpmap(TESNum, dirfiles)
+
+rc('figure',figsize=(10,10))
+# INSTRUMENT
+reload(qubic)
+ns = 512
+
+d = qubic.qubicdict.qubicDict()
+#d.read_from_file('/Users/hamilton/Python/GitQubicMousset/qubic/qubic/dicts/global_source_oneDet.dict')
+d.read_from_file('/home/james/qubic/qubic/dicts/global_source_oneDet.dict')
+d['nside']=ns
+
+q = qubic.QubicInstrument(d)
+s = qubic.QubicScene(d)
+
+def select_det(q,id):
+    #### For now the ids are not matched... so we only take the len(id) first detectors...
+    detector_i = q.detector[id]
+    q.detector = detector_i
+    return(q)
+
+from qubicpack.pixel_translation import tes2index
+from qubicpack.pixel_translation import make_id_focalplane
+fpmatrix = make_id_focalplane()
+
+if TESNum > 128: 
+    asicnum=2
+    thetes = TESNum-128
+else:
+    asicnum =1
+    thetes = TESNum
+    
+idx = tes2index(thetes,asicnum)
+iii = np.where(q.detector.index == idx)[0]
+
+q = select_det(q,iii)
+q.filter.nu = 150e9
+
+sb = q.get_synthbeam(s,0)
+#sb = sb[::-1]
+xr=0.1*np.max(sb)
+
+hp.gnomview(hpmap, reso=10, sub=(1,2,1), title='Data TES #{}'.format(TESNum))
+img=hp.gnomview(sb, rot=[0,90], reso=10, sub=(1,2,2), title='Theory TES #{}'.format(TESNum), return_projected_map=False)
+#tight_layout()
+#print(sb.shape, hpmap.shape, img.shape)
+
+
+```
+
+```{python}
+
+```
+
+```{python}
+
+```
+
+```{python}
+freq = 130
+tcuts = np.ones(200)
+xvals=np.linspace(0,199,200, dtype='int')
+#tval = np.linspace(-25,25,200, dtype='int')
+#print(tval.shape)
+
+for file in freqfiles:
+    #print(file)
+
+    q.filter.nu = freq*1e9
+    sb = q.get_synthbeam(s,0)
+    img=hp.gnomview(sb, rot=[0,90], reso=10, sub=(1,2,2), title='Theory TES #{}, Freq {} GHz'.format(TESNum, freq), return_projected_map=True)
+
+    %matplotlib qt
+    figure(figsize=(10,10))
+    imshow(img, origin='lower',vmin=-10000,vmax=10000)
+    title('TES #{}, freq {} GHz'.format(TESNum, freq))
+    colorbar()
+    cen, xy1, xy2 = ginput(3)
+    %matplotlib inline
+
+    dx = xy2[0] - xy1[0]
+    dy = xy2[1] - xy1[1]
+    a = dy/dx
+    b = cen[1] - cen[0]*a
+    
+    theta = math.degrees(math.atan(dy/dx))
+    
+    yvals = (xvals)*math.tan(math.radians(theta))
+    yvals = yvals.astype(int)
+    
+    plot(myimage[xvals,yvals],'.')
+    #print(img[xvals,yvals].shape)
+    tcuts = np.vstack((tcuts, img[xvals,yvals]))
+    
+    freq = freq+10
+    
+print(cuts.shape)
+cuts = cuts[1:6,:]
+print(cuts.shape)
+```
+
+```{python}
+print(xvals[0], yvals[0], img.shape, tcuts.shape, img[xvals,:].shape)
+print(len(img[:,0]))
+```
+
+```{python}
+xtdeg = np.linspace(-25,25, 200)
+
+figure(figsize=(10,8))
+plot(tcuts[0], 'r.')
+plot(tcuts[1], 'b.')
+plot(tcuts[2], 'g.')
+plot(tcuts[3], 'm.')
+plot(tcuts[4], 'c.')
+xticks(np.arange(0, 201, 10))
+```
+
+```{python}
+print(tcuts[:,0].shape)
+tcutarr = np.linspace(0, 4, 5)
+tcutarr = cutarr.astype('int')
+print(tcutarr)
+#guess = [210, 18000, 60, 310, 8000, 60, 350, 6000, 20] #these guess work for TES 96
+#guess = [75, 30000, 60, 200, 40000, 80, 350, 30000, 60]
+guess = [55, 0.4e7, 17, 99, 1.5e7, 20, 140, 0.65e7, 17]
+tfits = np.ones(200)
+for i in tcutarr:
+        
+    popt, pcov = curve_fit(func, xvals, tcuts[i], p0=guess, maxfev=40000)
+    fit = func(xvals, *popt)
+    print(fit.shape)
+    tfits = np.vstack((tfits, fit))
+    
+print(tfits.shape)
+tfits = tfits[1:6,:]
+print(popt.shape, popt)
+```
+
+```{python}
+figure(figsize=(10,8))
+plot(xtdeg, tcuts[0], 'r.', label='Theory 130')
+plot(xtdeg, tfits[0], 'r', label ='Fit 130')
+plot(xtdeg, tcuts[1], 'b.', label='Theory 140')
+plot(xtdeg, tfits[1], 'b', label ='Fit 140')
+plot(xtdeg, tcuts[2], 'g.', label='Theory 150')
+plot(xtdeg, tfits[2], 'g', label ='Fit 150')
+plot(xtdeg, tcuts[3], 'm.', label='Theory 160')
+plot(xtdeg, tfits[3], 'm', label ='Fit 160')
+plot(xtdeg, tcuts[4], 'c.', label='Theory 170')
+plot(xtdeg, tfits[4], 'c', label ='Fit 170')
+legend(loc='best')
+```
+
+```{python}
+print(TESNum)
+```
+
+```{python}
+figure(figsize=(16,4))
+subplot(1,2,1)
+plot(cuts[1], 'r.', label='Inst data 130')
+plot(fits[1], 'r', label ='Fit 130')
+#plot(cuts[4], 'c.', label='Inst data 170')
+plot(fits[2], 'c', label ='Fit 170')
+legend(loc='best')
+
+subplot(1,2,2)
+plot(tcuts[1]/max(tcuts[1]), 'k--', label='Theory 140')
+#plot(tcuts[4]/max(tcuts[4]), 'm--', label='Theory 170')
+
+legend(loc='best')
+```
+
+```{python}
+figure(figsize=(12,6))
+#plot(xtdeg, tcuts[4]/max(tcuts[4]), 'b--', label='Theory 140')
+#plot(xtdeg, tfits[1]/max(tfits[1]), 'b--', label ='Theory Fit 140')
+#plot(xtdeg, tcuts[2]/max(tcuts[2]), 'm--', label='Theory 150')
+plot(xtdeg, tfits[2]/max(tfits[2]), 'g--', label ='Theory Fit 150')
+plot(xtdeg, tfits[4]/max(tfits[4]), 'c--', label ='Theory Fit 170')
+#plot(xdeg, cuts[1]/max(cuts[1]), 'b.', label='Inst data 140')
+#plot(xdeg, fits[1]/max(fits[1]), 'b', label ='Fit 140')
+#plot(xdeg, cuts[2]/max(cuts[2]), 'g.', label='Inst data 150')
+plot(xdeg-0.2, fits[2]/max(fits[2]), 'g', label ='Cut Fit 150')
+plot(xdeg-0.2, fits[4]/max(fits[4]), 'c', label ='Cut Fit 170')
+
+xticks(np.arange(-25, 25, 5))
+ylim(0,1.15)
+xlim(-15, 15)
+title("TES #{}".format(TESNum))
+legend(loc='best')
+```
+
+```{python}
+#now need to fix so that popt parameters are returned to evaluate FWHM
+for pop in poptarr:
+    print(pop)
+```
+
+```{python}
+from qubic.selfcal_lib import *
+d = qubic.qubicdict.qubicDict()
+#d.read_from_file('/Users/hamilton/Python/GitQubicMousset/qubic/qubic/dicts/global_source_oneDet.dict')
+d.read_from_file('/home/james/qubic/qubic/dicts/global_source_oneDet.dict')
+
+rep = '/home/james/abberatedsims/QUBIC Simulations'
+
+baseline= np.linspace(1,64, 64, dtype='int')
+bs = [1,2]
+sc = SelfCalibration(baseline=bs, dead_switches=[], d=d)
+imga = sc.get_power_fp_aberration(rep=rep, indep_config=baseline, doplot=False)
+```
+
+```{python}
+TESNum=96
+hpmap = sbfit.get_hpmap(TESNum, dirfiles)
+
+rc('figure',figsize=(14,10))
+# INSTRUMENT
+reload(qubic)
+ns = 512
+
+d = qubic.qubicdict.qubicDict()
+#d.read_from_file('/Users/hamilton/Python/GitQubicMousset/qubic/qubic/dicts/global_source_oneDet.dict')
+d.read_from_file('/home/james/qubic/qubic/dicts/global_source_oneDet.dict')
+d['nside']=ns
+
+q = qubic.QubicInstrument(d)
+s = qubic.QubicScene(d)
+
+def select_det(q,id):
+    #### For now the ids are not matched... so we only take the len(id) first detectors...
+    detector_i = q.detector[id]
+    q.detector = detector_i
+    return(q)
+
+from qubicpack.pixel_translation import tes2index
+from qubicpack.pixel_translation import make_id_focalplane
+fpmatrix = make_id_focalplane()
+
+if TESNum > 128: 
+    asicnum=2
+    thetes = TESNum-128
+else:
+    asicnum =1
+    thetes = TESNum
+    
+idx = tes2index(thetes,asicnum)
+iii = np.where(q.detector.index == idx)[0]
+
+q = select_det(q,iii)
+q.filter.nu = 150e9
+
+sb = q.get_synthbeam(s,0)
+#sb = sb[::-1]
+xr=0.1*np.max(sb)
+
+#now try get abberated synth beam
+baseline = np.linspace(0,63,64, dtype='int')
+rep = '/home/james/abberatedsims/QUBIC Simulations/'
+extA = sclib.make_external_A(rep, baseline)
+print(extA)
+asb = q.get_synthbeam(s,0,external_A=extA)
+
+print(hpmap.shape, sb.shape, asb.shape)
+# %matplotlib qt
+hp.gnomview(hpmap, reso=10, sub=(2,2,1), title='Data TES #{}'.format(TESNum))
+hp.gnomview(sb, rot=[0,90], reso=10, sub=(2,2,2), title='Theory TES #{}'.format(TESNum), return_projected_map=False)
+
+hp.gnomview(asb, rot=[0,90], reso=10, sub=(2,2,3), title='Abberated TES #{}'.format(TESNum), return_projected_map=False)
+hp.gnomview(sb/max(sb)-asb/max(asb), rot=[0,90], reso=10, sub=(2,2,4), title='Theory - Abberated (normalised) TES #{}'.format(TESNum), return_projected_map=False)
+# #%matplotlib inline
+```
+
+```{python}
+hp.gnomview(sb/max(sb)-asb/max(asb), rot=[0,90], reso=10, sub=(1,3,3), title='Abberated TES #{}'.format(TESNum), return_projected_map=False)
+
+```
+
+```{python}
+# %matplotlib qt
+hp.gnomview(hpmap, reso=10, sub=(2,2,1), title='Data TES #{}'.format(TESNum))
+hp.gnomview(sb, rot=[0,90], reso=10, sub=(2,2,2), title='Theory TES #{}'.format(TESNum), return_projected_map=False)
+
+hp.gnomview(asb, rot=[0,90], reso=10, sub=(2,2,3), title='Abberated TES #{}'.format(TESNum), return_projected_map=False)
+hp.gnomview(sb/max(sb)-asb/max(asb), rot=[0,90], reso=10, sub=(2,2,4), title='Theory - Abberated (normalised) TES #{}'.format(TESNum), return_projected_map=False)
+#hp.gnomview(100*((sb/max(sb)-asb/max(asb))/(sb/max(sb))), rot=[0,90], reso=10, sub=(2,2,4), title='Theory - Abberated (normalised) TES #{}'.format(TESNum), return_projected_map=False)
+
+```
+
+```{python}
+
+```

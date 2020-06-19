@@ -1,0 +1,459 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import qubic.sb_fitting as sbfit
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+import qubic.fibtools as ft
+import scipy.optimize as opt
+import numpy as np
+import math
+import pickle
+
+def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    x, y = xdatatuple
+    xo = float(xo)
+    yo = float(yo)    
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = offset + amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))
+    return g.ravel()
+```
+
+```{python}
+"""20200104 comp list"""
+"""load 6 2020-01-14 flatmaps
+indeed we can see there are ghosts"""
+#here is a list of good tes for comparison
+complist = [9, 16, 22, 24, 27, 50, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+    170, 171, 172, 181, 186, 201, 208, 210, 213, 216, 218, 219]
+
+dirfile = '/home/james/synthbeamdata/2020-01-14'
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+flatmaps = np.zeros([len(complist), 101, 101])
+
+for i, tes in enumerate(complist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    flatmap = np.flip(flatmap)
+    flatmaps[i, :, :] = flatmap
+
+plt.figure(figsize=(10,20))
+plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+plt.xticks(np.arange(-12, 12, step=1))
+plt.yticks(np.arange(45, 65, step=1))
+plt.grid(True)
+
+```
+
+```{python}
+AZ, EL = np.meshgrid(az, el)
+testmap = flatmaps[2,:,:]
+plt.figure(figsize=(10,10))
+plt.scatter(AZ.ravel(), EL.ravel(), c=testmap.ravel())
+plt.xticks(np.arange(min(az), max(az), step=2))
+plt.yticks(np.arange(min(el), max(el), step=2))
+plt.grid(True)
+```
+
+```{python}
+azval = 2.1
+elval = 52
+initial_guess = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
+
+fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
+data_fitted = twoD_Gaussian((AZ, EL), *fit_params)
+fit_errors = np.sqrt(np.diag(cov_mat))
+
+print('Fit Amplitude:', fit_params[0], '\u00b1', fit_errors[0])
+print('Fit X-Center: ', fit_params[1], '\u00b1', fit_errors[1])
+print('Fit Y-Center: ', fit_params[2], '\u00b1', fit_errors[2])
+print('Fit X-Sigma:  ', fit_params[3], '\u00b1', fit_errors[3])
+print('Fit Y-Sigma:  ', fit_params[4], '\u00b1', fit_errors[4])
+
+plt.figure(figsize=(10,10))
+plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+```
+
+```{python}
+"""build a list or arrays of ghost centers OR do fits and acceptance criteria, 
+this method needs supervision
+add fit parameters to arrays to quantify
+perhaps pandas useful here"""
+# %matplotlib qt
+plt.figure(figsize=(10,10))
+plt.subplots(121)
+plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+plt.title("TES {}".format(tes))
+plt.xlabel("Azimuth [$^\circ$]")
+plt.ylabel("Elevation [$^\circ$]")
+#get peaks from plot
+var1, var2 = plt.ginput(2)
+print(var1[0], var1[1])
+
+#set up fitting
+initial_guess1 = (max(testmap.ravel()), var1[0], var1[1], 1, 1, 0, 0)
+initial_guess2 = (max(testmap.ravel()), var2[0], var2[1], 1, 1, 0, 0)
+fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess1)
+fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess2)
+data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
+fit_errors1 = np.sqrt(np.diag(cov_mat1))
+fit_errors2 = np.sqrt(np.diag(cov_mat2))
+
+#calculate angle
+dx = fit_params2[1] - fit_params1[1]
+dy = fit_params2[2] - fit_params1[2]
+ang = np.rad2deg(math.atan2(dy, dx))
+print(ang)
+
+#plot contour fits and text do second plot
+plt.subplots(121)
+plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+plt.title("TES {} Ghost Fitting".format(tes))
+plt.xlabel("Azimuth [$^\circ$]")
+plt.ylabel("Elevation [$^\circ$]")
+plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k', label='Peak 1')
+plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
+plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
+plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+
+#add relavant vars to arrays... once in the loop
+#plt.savefig("/home/james/ghostimages/ghostfits/ghostfits{}".format(tes))
+plt.pause(5)
+plt.close()
+```
+
+```{python}
+"""build arrays during loop to make satitistics
+should have fitted centers for both fits, amps, ampratio, relative angle
+I also need a way to tell during click fitting if fits are good
+maybe just take notes as i loop
+save fits as png"""
+# %matplotlib qt
+#new complist removes bad fits helps error exeptions
+#remove 9, 50, 186
+complist = [16, 22, 24, 27, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+    170, 171, 172, 181, 201, 208, 210, 213, 216, 218, 219]
+#testcomplist
+#complist = [16, 22, 24]
+
+#print(len(complist))
+fit1x = np.zeros(len(complist))
+fit1y = np.zeros(len(complist))
+fit2x = np.zeros(len(complist))
+fit2y = np.zeros(len(complist))
+amp1 = np.zeros(len(complist))
+amp2 = np.zeros(len(complist))
+ampr = np.zeros(len(complist))
+angle = np.zeros(len(complist))
+tesnum = np.zeros(len(complist))
+fitsdata1 = np.zeros((len(complist),101,101))
+fitsdata2 = np.zeros((len(complist),101,101))
+
+for i, tes in enumerate(complist):
+
+    #do plot
+    plt.figure(figsize=(10,10))
+    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+            extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+    plt.title("TES {}".format(tes))
+    plt.xlabel("Azimuth [$^\circ$]")
+    plt.ylabel("Elevation [$^\circ$]")
+    #get peaks from plot
+    var1, var2 = plt.ginput(2)
+    
+    #set up fitting
+    initial_guess1 = (max(flatmaps[i,:,:].ravel()), var1[0], var1[1], 1, 1, 0, 0)
+    initial_guess2 = (max(flatmaps[i,:,:].ravel()), var2[0], var2[1], 1, 1, 0, 0)
+    fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess1)
+    fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess2)
+    data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+    data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
+    fit_errors1 = np.sqrt(np.diag(cov_mat1))
+    fit_errors2 = np.sqrt(np.diag(cov_mat2))
+    
+    #calculate angle
+    dx = fit_params2[1] - fit_params1[1]
+    dy = fit_params2[2] - fit_params1[2]
+    ang = np.rad2deg(math.atan2(dy, dx))
+    #print(ang)
+    #plot contour fits and text
+    plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
+    plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
+    plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+    plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
+    plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+
+    #append arrays
+    tesnum[i] = tes
+    fit1x[i] = fit_params1[1]
+    fit1y[i] = fit_params1[2]
+    fit2x[i] = fit_params2[1]
+    fit2y[i] = fit_params2[2]
+    amp1[i] = fit_params1[0]
+    amp2[i] = fit_params2[0]
+    ampr[i] = fit_params1[0] / fit_params2[0]
+    angle[i] = ang
+    fitsdata1[i, :, :] = data_fitted1.reshape(101, 101)
+    fitsdata2[i, :, :] = data_fitted2.reshape(101, 101)
+    
+    
+    #add relavant vars to arrays... once in the loop
+    plt.savefig("/home/james/ghostimages/ghostfitsr2/ghostfits{}".format(tes), bbox_inches='tight')
+    plt.pause(3)
+    plt.close()
+```
+
+```{python}
+# fitsdata1 = np.reshape(3,101,101)
+# fitsdata2 = np.reshape(3,101,101)
+print(fitsdata1.shape)
+```
+
+```{python}
+""" do nice subplotter with raw and fits"""
+"""do comp list comparison plots"""
+# %matplotlib inline
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+
+for i, tes in enumerate(complist):
+    
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,2,1)
+    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+            extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+    plt.title("TES {}".format(tes))
+    plt.xlabel("Azimuth [$^\circ$]")
+    plt.ylabel("Elevation [$^\circ$]")
+    
+    #plot the ghost data
+    plt.subplot(1,2,2)
+    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+            extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+    plt.title("TES {}".format(tes))
+    plt.xlabel("Azimuth [$^\circ$]")
+    plt.ylabel("Elevation [$^\circ$]")
+        #plot contour fits and text
+    plt.contour(AZ, EL, fitsdata1[i], 3, colors='k')
+    plt.contour(AZ, EL, fitsdata2[i], 3, colors='r')
+```
+
+```{python}
+datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle)).T
+print(datmat.shape)
+with open('objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+    pickle.dump(datmat, f)
+
+# Getting back the objects:
+# with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
+#     datmat = pickle.load(f)
+```
+
+```{python}
+#should remove 16, 57?, 181?, 210 to leave only good fits
+badlist = [16, 57, 181, 210]
+newarr = np.array([])
+print(datmat[2,:].shape)
+
+for i, tes in enumerate(datmat[:,0]):
+    #print(i, tes)
+    if tes not in badlist:
+        newarr = np.hstack((newarr, datmat[i,:]))
+        
+newarr = np.reshape(newarr, (30,9))
+        
+print(newarr.shape, newarr[:, 0])
+```
+
+```{python}
+"""now time to do statistics
+I should also do plot without the fits to show how they work
+I should also now start writing parts of this and doing plots in correct themes
+also do a git proj backup"""
+```
+
+```{python}
+"""do the same but use click inputs and 2 fits"""
+# azval = 2.1
+# elval = 52
+initial_guess1 = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
+initial_guess2 = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
+
+fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
+data_fitted = twoD_Gaussian((AZ, EL), *fit_params)
+fit_errors = np.sqrt(np.diag(cov_mat))
+
+print('Fit Amplitude:', fit_params[0], '\u00b1', fit_errors[0])
+print('Fit X-Center: ', fit_params[1], '\u00b1', fit_errors[1])
+print('Fit Y-Center: ', fit_params[2], '\u00b1', fit_errors[2])
+print('Fit X-Sigma:  ', fit_params[3], '\u00b1', fit_errors[3])
+print('Fit Y-Sigma:  ', fit_params[4], '\u00b1', fit_errors[4])
+
+plt.figure(figsize=(10,10))
+plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+```
+
+```{python}
+
+```
+
+```{python}
+# azval = 1
+# elval = 54
+# #print(AZ.shape, testmap.shape, np.mean(testmap))
+# taz = AZ.ravel()
+# tel = EL.ravel()
+# testmap = testmap.ravel()
+# #set values around points to zero or some number
+# for i, azz in enumerate(taz.ravel()):
+#     if abs(azz - azval) > 3:      
+#         testmap[i] = 2000
+#         testaz = np.append(testaz, azz)
+        
+# for i, ell in enumerate(tel.ravel()): 
+#     if abs(ell - elval) > 3:      
+#         testmap[i] = 2000
+#         testel = np.append(testel, ell)
+
+# for i, azz in enumerate(taz.ravel()):
+#     for j, ell in enumerate(tel.ravel()):
+#         if abs(azz - azval) > 3 and abs(ell - elval) > 3:
+#             testmap[j] = 1000
+#             testaz = np.append(testaz, azz)
+#             testel = np.append(testel, ell)
+            
+# for i, azz in enumerate(taz):
+#     for j, ell in enumerate(tel):
+#         if abs(azz - azval) < 3 and abs(ell - elval) < 3:
+#             testaz = np.append(testaz, azz)
+#             testel = np.append(testel, ell)
+#             newmap = np.append(newmap, testmap[j])
+            #print("Found region", azz, ell, testmap[j])
+            
+
+# print(testaz.shape, testel.shape)
+
+# azmesh = testaz.reshape(101, 101)
+# mapmesh = testmap.reshape(101,101)
+# print(testmap.shape, type(testmap), type(mapmesh), mapmesh.shape, max(testmap))
+
+# initial_guess = (200000, azval, elval, 2, 2, 0, 0)
+# popt, pcov = opt.curve_fit(twoD_Gaussian, (AZ, EL), mapmesh.ravel(), p0=initial_guess)
+# data_fitted = twoD_Gaussian((AZ, EL), *popt)
+
+# plt.figure(figsize=(10,20))
+# plt.imshow(mapmesh, aspect='equal',
+#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+
+# plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+# plt.xticks(np.arange(-12, 12, step=1))
+# plt.yticks(np.arange(45, 65, step=1))
+# plt.grid(True)
+# plt.axis([np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+# print(popt)
+# print(pcov)
+# p_sigma = np.sqrt(np.diag(pcov))
+# print(p_sigma)
+```
+
+```{python}
+# """plot a testmap"""
+# flatmap = flatmaps[2,:,:]
+# testmap = flatmap.ravel()
+# testmapfltn = flatmap.flatten()
+
+# plt.figure()
+# plt.plot(AZ.ravel(),testmap, 'b.')
+# plt.figure()
+# plt.plot(EL.ravel(),testmap, 'b.')
+# plt.figure()
+# plt.scatter(AZ.ravel(), EL.ravel(), c=testmap)
+# plt.figure()
+# plt.imshow(flatmaps[2,:,:], aspect='equal', 
+#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+# plt.xticks(np.arange(-12, 12, step=1))
+# plt.yticks(np.arange(45, 65, step=1))
+# plt.grid(True)
+```
+
+```{python}
+# print(az.shape, AZ.ravel().shape)
+# print(EL.ravel())
+# print(EL.flatten())
+# print(testmap)
+# print(testmapfltn)
+# plt.subplot(121)
+# plt.imshow(testmap.reshape(101,101), aspect='equal', 
+#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+# # plt.subplot(122)
+# # plt.imshow(testmap.reshape(101,101), aspect='equal', 
+# #         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+```
+
+```{python}
+# """lets try a more efficient way"""
+# azval = -8
+# elval = 49
+# #print(AZ.shape, testmap.shape, np.mean(testmap))
+# taz = AZ.ravel()
+# tel = EL.ravel()
+# testmap = flatmap.ravel()
+# testmap[testmap < 10000] = 0
+
+# for i, azz in enumerate(taz):
+#     if abs(azz - azval) > 3:      
+#         testmap[i] = 0
+#         #testaz = np.append(testaz, azz)
+        
+# for i, ell in enumerate(tel): 
+#     if abs(ell - elval) > 3:      
+#         testmap[i] = 0
+        
+
+# mapmesh = testmap.reshape(101,101)
+# #print(testmap.shape, type(testmap), type(mapmesh), mapmesh.shape, max(testmap))
+
+# initial_guess = (max(testmap), azval, elval, 0.5, 0.5, 0, 0)
+# popt, pcov = opt.curve_fit(twoD_Gaussian, (AZ, EL), mapmesh.ravel(), p0=initial_guess)
+# data_fitted = twoD_Gaussian((AZ, EL), *popt)
+
+# plt.figure(figsize=(10,10))
+# plt.imshow(mapmesh, aspect='equal',
+#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+
+# plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+```
+
+```{python}
+
+```
