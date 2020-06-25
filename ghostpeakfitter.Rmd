@@ -22,6 +22,7 @@ import scipy.optimize as opt
 import numpy as np
 import math
 import pickle
+import seaborn as sns
 
 def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
     x, y = xdatatuple
@@ -229,6 +230,44 @@ for i, tes in enumerate(complist):
 ```
 
 ```{python}
+"""make nice pdf like JC"""
+
+plt.rc('figure',figsize=(16,8))
+nnx = 5
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+elmin = min(el)
+elmax = max(el)
+azmin = min(az)
+azmax = max(az)
+
+
+for k in range(nplots):
+    plt.figure()
+    for i in range(nnx*nny):
+        ites = i+k*nnx*nny
+        if ites < 256:
+            plt.subplot(nny,nnx,i+1)
+            mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+            
+            plt.imshow(flatmaps[ites,:,:], aspect='equal', origin='lower',
+                   extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+            
+            plt.contour(AZ, EL, fitsdata1[ites], 3, colors='k')
+            plt.contour(AZ, EL, fitsdata2[ites], 3, colors='r')
+            plt.text(fit1x[ites]+1, fit1y[ites]+4, "{:08.2f}".format(amp1[ites], prec=2), {'color': 'k', 'fontsize': 12})
+            plt.text(fit2x[ites]+1, fit2y[ites]+1, "{:08.2f}".format(amp2[ites], prec=2), {'color': 'r', 'fontsize': 12})
+            plt.text(fit1x[ites], fit1y[ites]-3, "Angle {:03.2f}".format(angle[ites], prec=2), {'color': 'b', 'fontsize': 12})
+
+            plt.title('TES {} Ghost Fits'.format(int(tesnum[ites])), fontsize=16)
+            plt.savefig('/home/james/ghostimages/ghostfitsr2/jj{}.png'.format(k), bbox_inches='tight')
+    plt.tight_layout()
+    plt.show()
+```
+
+```{python}
 # fitsdata1 = np.reshape(3,101,101)
 # fitsdata2 = np.reshape(3,101,101)
 print(fitsdata1.shape)
@@ -267,14 +306,19 @@ for i, tes in enumerate(complist):
 ```
 
 ```{python}
-datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle)).T
-print(datmat.shape)
-with open('objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(datmat, f)
+# datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle)).T
+# print(datmat.shape)
+# with open('objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+#     pickle.dump(datmat, f)
 
 # Getting back the objects:
 # with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
 #     datmat = pickle.load(f)
+
+#save fits data separately 
+fitsmat = np.vstack((fitsdata1, fitsdata2))
+with open('fits_objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+    pickle.dump(fitsmat, f)
 ```
 
 ```{python}
@@ -298,6 +342,192 @@ print(newarr.shape, newarr[:, 0])
 I should also do plot without the fits to show how they work
 I should also now start writing parts of this and doing plots in correct themes
 also do a git proj backup"""
+header = ["TESnum", "xp1", "yp1", "xp2", "yp2", "amp1", "amp2", "ampr", "angle"]
+#print(header)
+#print(newarr.shape)
+#newarr = newarr.T
+
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+#sns.palplot(current_palette)
+#calc average
+avg = np.mean(newarr[8])
+
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Angle [$^\circ$]")
+plt.plot(newarr[0], np.ones(len(newarr[8]))*np.mean(newarr[8]),
+         '--', color=current_palette[0], lw=5, markersize=12, label='Mean Angle {:3.2f}$^\circ$'.format(avg))
+plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Angle')
+plt.legend(loc='upper left')
+
+plt.savefig("/home/james/ghostimages/plots/angles", bbox_inches='tight')
+```
+
+```{python}
+"""version 2 with standard deviation"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+#sns.palplot(current_palette)
+#calc average
+avg = np.mean(newarr[8])
+sd = np.sqrt(np.sum((newarr[8]-avg)**2) / len(newarr[8]))
+npsd = np.std(newarr[8], ddof=0)
+print(sd, npsd)
+sdp1 = avg+npsd
+sdp2 = avg-npsd
+
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Angle [$^\circ$]")
+plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Angle')
+plt.plot(newarr[0], np.ones(len(newarr[8]))*np.mean(newarr[8]),
+         '--', color=current_palette[1], lw=5, markersize=12, label='Mean {:3.2f}$^\circ$'.format(avg))
+
+#try plot stdv
+plt.plot(newarr[0], np.ones(len(newarr[8]))*sdp1, 
+         '--', color=current_palette[2], lw=5, markersize=12, label='\u03C3 = {:3.2f}$^\circ$'.format(npsd))
+plt.plot(newarr[0], np.ones(len(newarr[8]))*sdp2, 
+         '--', color=current_palette[2], lw=5, markersize=12)
+plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
+
+plt.legend(loc='upper left')
+
+plt.savefig("/home/james/ghostimages/plots/anglesSDEV", bbox_inches='tight')
+```
+
+```{python}
+"""do histogram"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+plt.figure(figsize=(16,8))
+n, bins, patches = plt.hist(newarr[8], bins='auto', facecolor=current_palette[0],rwidth=0.95)
+plt.xlabel('Angle [$^\circ$]')
+plt.ylabel('Counts')
+
+plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
+```
+
+```{python}
+"""load psfs"""
+"""load and plot simulation data"""
+psflist = np.array([6, 37, 50, 58, 76, 93])
+
+psfdata = np.zeros([6, 3, 251001])
+for i, tes in enumerate(psflist):
+    data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
+    psfdata[i,:,:] = data.T
+    
+
+```
+
+```{python}
+"""do plpots"""
+for i, tes in enumerate(psflist):
+
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,2,1)
+    plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+    plt.title('Sim data TES {}'.format(tes))
+    
+    plt.subplot(1,2,2)
+    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+    plt.title('Data TES {}'.format(tes))
+```
+
+```{python}
+"""do the same but with distance of TES from center"""
+```
+
+```{python}
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Peak Amplitude Ratio")
+
+plt.plot(newarr[0], newarr[7], '.-', color=current_palette[3], lw=4, markersize=20, label='Amplitude Ratio')
+plt.legend(loc='upper left')
+
+
+plt.twinx()
+plt.plot([newarr[0],newarr[0]], [newarr[5], newarr[6]], 'k-', lw=2, markersize=20);
+plt.plot(newarr[0], newarr[5], '.', color=current_palette[4], markersize=20, label='Main Peak Amplitude')
+plt.plot(newarr[0], newarr[6], '.', color=current_palette[2], markersize=20, label='Ghost Peak Amplitude')
+plt.ylabel("Peak Amplitude")
+plt.legend(loc='upper center')
+
+plt.savefig("/home/james/ghostimages/plots/amplitudes", bbox_inches='tight')
+```
+
+```{python}
+"""take amplitude ratios and sdev"""
+avg = np.mean(newarr[7])
+sd = np.sqrt(np.sum((newarr[7]-avg)**2) / len(newarr[7]))
+npsd = np.std(newarr[7], ddof=0)
+print(sd, npsd)
+sdp1 = avg+npsd
+sdp2 = avg-npsd
+
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Peak Amplitude Ratio")
+
+plt.plot(newarr[0], newarr[7], '.', color=current_palette[3], lw=4, markersize=20, label='Amplitude Ratio')
+#plot avg
+plt.plot(newarr[0], np.ones(len(newarr[7]))*avg, 
+         '--', color=current_palette[1], lw=5, markersize=12, label='Mean {:3.2f}$^\circ$'.format(avg))
+#try plot stdv
+plt.plot(newarr[0], np.ones(len(newarr[7]))*sdp1, 
+         '--', color=current_palette[2], lw=5, markersize=12, label='\u03C3 = {:3.2f}$^\circ$'.format(npsd))
+plt.plot(newarr[0], np.ones(len(newarr[7]))*sdp2, 
+         '--', color=current_palette[2], lw=5, markersize=12)
+plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
+
+plt.legend(loc=(0.07, 0.75))
+plt.savefig("/home/james/ghostimages/plots/amplitudesSDEV", bbox_inches='tight')
+```
+
+```{python}
+print(max(newarr[0]))
+print(np.mean(newarr[7]))
+```
+
+```{python}
+"""do histogram"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+plt.figure(figsize=(16,8))
+n, bins, patches = plt.hist(newarr[7], bins='auto', facecolor=current_palette[3],rwidth=0.95)
+plt.xlabel('Amplitude Ratio')
+plt.ylabel('Counts')
+
+plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
+```
+
+```{python}
+
+```
+
+```{python}
+"""HERE BE DRAGONS... all just test code below"""
 ```
 
 ```{python}
@@ -321,10 +551,6 @@ plt.figure(figsize=(10,10))
 plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
 plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
-```
-
-```{python}
-
 ```
 
 ```{python}

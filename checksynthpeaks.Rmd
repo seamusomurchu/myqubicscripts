@@ -1,0 +1,189 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+"""calculate the differences of data synth peak poisitions to ideal"""
+```
+
+```{python}
+import qubic.sb_fitting as sbfit
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+import qubic.fibtools as ft
+import scipy.optimize as opt
+```
+
+```{python}
+"""first load and test the PSFs"""
+"""load psfs"""
+"""load and plot simulation data"""
+psflist = np.array([6, 37, 50, 58, 76, 93])
+
+psfdata = np.zeros([6, 3, 251001])
+for i, tes in enumerate(psflist):
+    data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
+    psfdata[i,:,:] = data.T
+
+plt.figure(figsize=(10,10))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+    plt.axis('equal')
+    #plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Sim data TES {}'.format(tes))
+```
+
+```{python}
+print(psfdata.shape, psfdata[0,:,::20].shape)
+"""testplot with fraction of data"""
+plt.figure(figsize=(16,12))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.scatter(psfdata[i,0,::23], psfdata[i,1,::23]+50, c=psfdata[i,2,::23], marker='d')
+    plt.axis('equal')
+    plt.title('Sim data TES {}'.format(tes))
+```
+
+```{python}
+print(psfdata[0].shape)
+```
+
+```{python}
+"""
+reform psf sim data into meshgrid"""
+def makemeshgrid(psfdata, meshsize):
+    x = np.linspace(min(psfdata[0,:]), max(psfdata[0,:]), meshsize)
+    y = np.linspace(min(psfdata[1,:]), max(psfdata[1,:]), meshsize)
+
+    X,Y = np.meshgrid(x, y)
+
+    # Interpolate (x,y,z) points [mat] over a normal (x,y) grid [X,Y]
+    #   Depending on your "error", you may be able to use other methods
+    Z = griddata((psfdata[0,:], psfdata[1,:]), psfdata[2,:], (X,Y), method='nearest')
+
+    plt.pcolormesh(X,Y,Z)
+    plt.show()
+    return Z
+
+meshsize = 151
+psfmesh = np.zeros([6, meshsize, meshsize])
+for i, tes in enumerate(psflist):
+    psfmesh[i,:,:] = makemeshgrid(psfdata[i], meshsize)
+
+```
+
+```{python}
+print(psfmesh[0,:,:].shape)
+print(min(y))
+```
+
+```{python}
+"""fit peaks to meshgrid psfdata"""
+"""do fits and find peaks to psf data"""
+x = np.linspace(min(psfdata[0,0,:]), max(psfdata[0,0,:]), meshsize)
+y = np.linspace(min(psfdata[0,1,:]), max(psfdata[0,1,:]), meshsize)
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=False)
+peaks = np.zeros([6,4,9])
+
+for i, tes in enumerate(psflist):
+
+    fit, xypeaks = sbfit.fit_sb(psfmesh[i,:,:], x, y+50, sbfitmodel3, verbose=True, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(tes))
+    #print(xypeaks)
+    peaks[i,:,:] = xypeaks
+```
+
+```{python}
+print(peaks[0,:,:])
+```
+
+```{python}
+"""do plots"""
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+
+for i, tes in enumerate(psflist):
+
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,2,1)
+    plt.scatter(psfdata[i,0,::23], psfdata[i,1,::23]+50, c=psfdata[i,2,::23], marker='d')
+    #plt.axis('equal')
+    plt.title('Sim data TES {} Scatter'.format(tes))
+    plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    
+    plt.subplot(1,2,2)
+    plt.imshow(psfmesh[i,:,:], aspect='equal', origin='lower',
+        extent=[np.min(x), np.max(x), np.min(y)+50, np.max(y)+50])
+    plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Sim data TES {} Imshow'.format(tes))
+    #plt.axis('equal')
+```
+
+```{python}
+import qubic
+d = qubic.qubicdict.qubicDict()
+d.read_from_file('../qubic/qubic/dicts/global_source_oneDet.dict')
+q = qubic.QubicMultibandInstrument(d)
+
+vtxs = q[0].detector.vertex
+vtxcounter = np.zeros(992)
+print("vertexes shape: ", vtxs.shape)
+print(vtxs[0,:,0:2])
+
+plt.figure(figsize=(10,10))
+plt.axis('equal')
+for i in range(len(vtxs[:,0,0])):
+    cenx = (vtxs[i,0,0] + vtxs[i,2,0]) / 2
+    ceny = (vtxs[i,0,1] + vtxs[i,2,1]) / 2
+    plt.plot(cenx, ceny, 'rs')
+    plt.text(cenx+0.0002, ceny+0.0003,'{}'.format(i+1))
+```
+
+```{python}
+# print(vtxs[0,:,0:2])
+# print(vtxs[0,0,0])
+# print(vtxs[0,0,1])
+# print(vtxs[0,2,0])
+# print(vtxs[0,2,1])
+
+
+# plt.plot(vtxs[0,0,0], vtxs[0,0,1], 'r.')
+# plt.plot(vtxs[0,1,0], vtxs[0,2,1], 'g.', markersize=10)
+# plt.plot(vtxs[0,2,0], vtxs[0,0,1], 'b.')
+# plt.plot(vtxs[0,0,0], vtxs[0,2,1], 'k.')
+
+# cenx = (vtxs[0,0,0] + vtxs[0,2,0]) / 2
+# ceny = (vtxs[0,0,1] + vtxs[0,2,1]) / 2
+
+# plt.plot(cenx, ceny, 'r*')
+
+
+
+```
+
+```{python}
+import qubicpack.pix2tes as qp
+```
+
+```{python}
+qp.assign_pix2tes(1)
+```
+
+```{python}
+
+```
