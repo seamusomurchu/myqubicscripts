@@ -311,14 +311,14 @@ for i, tes in enumerate(complist):
 # with open('objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
 #     pickle.dump(datmat, f)
 
-# Getting back the objects:
-# with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
-#     datmat = pickle.load(f)
+#Getting back the objects:
+with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
+    datmat = pickle.load(f)
 
 #save fits data separately 
-fitsmat = np.vstack((fitsdata1, fitsdata2))
-with open('fits_objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(fitsmat, f)
+# fitsmat = np.vstack((fitsdata1, fitsdata2))
+# with open('fits_objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+#     pickle.dump(fitsmat, f)
 ```
 
 ```{python}
@@ -332,7 +332,7 @@ for i, tes in enumerate(datmat[:,0]):
     if tes not in badlist:
         newarr = np.hstack((newarr, datmat[i,:]))
         
-newarr = np.reshape(newarr, (30,9))
+newarr = np.reshape(newarr, (30,9)).T
         
 print(newarr.shape, newarr[:, 0])
 ```
@@ -365,7 +365,7 @@ plt.plot(newarr[0], np.ones(len(newarr[8]))*np.mean(newarr[8]),
 plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Angle')
 plt.legend(loc='upper left')
 
-plt.savefig("/home/james/ghostimages/plots/angles", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/plots/angles", bbox_inches='tight')
 ```
 
 ```{python}
@@ -523,7 +523,105 @@ plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
 ```
 
 ```{python}
+print(newarr.shape)
+#newarr = newarr.T
+print(newarr[:,0])
+header = ["TESnum", "xp1", "yp1", "xp2", "yp2", "amp1", "amp2", "ampr", "angle"]
+#correctTESarr = [22, 24, 27, 51, 58, 59, 74, 75, 76, 86, 93, 106, 107, 11]
+carr = np.array([])
 
+for i in range(len(newarr[:,0])):
+    
+    if newarr[i,0] >=124:
+        carr = np.append(carr, newarr[i,0]-123)
+        
+    else:
+        carr = np.append(carr, newarr[i,0])
+        
+print( carr)
+```
+
+```{python}
+"""loadand plot pixcens"""
+import qubic
+d = qubic.qubicdict.qubicDict()
+d.read_from_file('../qubic/qubic/dicts/global_source_oneDet.dict')
+q = qubic.QubicMultibandInstrument(d)
+vtxs = q[0].detector.vertex
+#load qubicpack TESnums and flip*
+from qubicpack.pixel_translation import make_id_focalplane, plot_id_focalplane
+FPidentity = make_id_focalplane()
+q3arr = np.array([])
+for i in range(len(FPidentity.PIX)):
+    #print(FPidentity[i].PIX)
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        q3arr = np.append(q3arr, FPidentity[i].TES)
+q3arr = np.flip(q3arr)
+```
+
+```{python}
+"""PLOT"""
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+for i in range(len(vtxs[:,0,0])):
+    cenx = (vtxs[i,0,0] + vtxs[i,2,0]) / 2
+    ceny = (vtxs[i,0,1] + vtxs[i,2,1]) / 2
+    plt.plot(cenx, ceny, 'rs')
+    plt.text(cenx+0.0002, ceny+0.0003,'Pix{}'.format(i+1), fontsize=10)
+    plt.text(cenx+0.0002, ceny-0.0009,'TES{}'.format(int(q3arr[i])), fontsize=10)
+#     if i <= 123:
+#         plt.text(cenx+0.0002, ceny-0.0009,'T{}A2'.format(int(q3arr[i])), fontsize=10)
+#     if i >= 123:
+#         plt.text(cenx+0.0002, ceny-0.0009,'T{}A1'.format(int(q3arr[i])), fontsize=10)
+        
+```
+
+```{python}
+print(vtxs.shape)
+print(carr)
+print(q3arr.shape)
+print(carr[0:15])
+```
+
+```{python}
+"""create usefull matrix with pixcens"""
+pxar = np.array([])
+pyar = np.array([])
+tesnums = np.array([])
+
+for i in range(len(vtxs[:,0,0])):
+    
+    if q3arr[i] in carr[0:15]:
+        print(q3arr[i], i)
+        cenx = (vtxs[i,0,0] + vtxs[i,2,0]) / 2
+        ceny = (vtxs[i,0,1] + vtxs[i,2,1]) / 2
+        
+        pxar = np.append(pxar, cenx)
+        pyar = np.append(pyar, ceny)
+        tesnums = np.append(tesnums, q3arr[i])
+        
+print(pxar.shape)
+```
+
+```{python}
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+for i in range(len(vtxs[:,0,0])):
+    cenx = (vtxs[i,0,0] + vtxs[i,2,0]) / 2
+    ceny = (vtxs[i,0,1] + vtxs[i,2,1]) / 2
+    plt.plot(cenx, ceny, 'rs')
+    #plt.text(cenx+0.0002, ceny+0.0003,'Pix{}'.format(i+1), fontsize=10)
+    plt.text(cenx+0.0002, ceny-0.0009,'TES {}'.format(int(q3arr[i])), fontsize=10)
+    
+for i in range(len(pxar)):
+    plt.plot(pxar[i], pyar[i], 'bs')
+    plt.text(pxar[i]+0.0002, pyar[i]+0.0004,'TES {}'.format(int(tesnums[i])), fontsize=10)
+    plt.text(pxar[i]+0.0002, pyar[i]-0.0003,'{:3.2f}$^\circ$'.format(newarr[i,7]), fontsize=10)
 ```
 
 ```{python}

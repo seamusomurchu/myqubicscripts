@@ -142,16 +142,21 @@ q = qubic.QubicMultibandInstrument(d)
 
 vtxs = q[0].detector.vertex
 vtxcounter = np.zeros(992)
-print("vertexes shape: ", vtxs.shape)
-print(vtxs[0,:,0:2])
+#print("vertexes shape: ", vtxs.shape)
+#print(vtxs[0,:,0:2])
 
-plt.figure(figsize=(10,10))
+plt.figure(figsize=(14,14))
 plt.axis('equal')
 for i in range(len(vtxs[:,0,0])):
     cenx = (vtxs[i,0,0] + vtxs[i,2,0]) / 2
     ceny = (vtxs[i,0,1] + vtxs[i,2,1]) / 2
     plt.plot(cenx, ceny, 'rs')
-    plt.text(cenx+0.0002, ceny+0.0003,'{}'.format(i+1))
+    plt.text(cenx+0.0002, ceny+0.0003,'Pix{}'.format(i+1))
+    
+    if i <= 127:
+        plt.text(cenx, ceny-0.0009,'T{}A1'.format(i+1))
+    else:
+        plt.text(cenx, ceny-0.0009,'T{}A2'.format(i-128))
 ```
 
 ```{python}
@@ -177,11 +182,46 @@ for i in range(len(vtxs[:,0,0])):
 ```
 
 ```{python}
-import qubicpack.pix2tes as qp
+from qubicpack.pixel_translation import make_id_focalplane, plot_id_focalplane
+FPidentity = make_id_focalplane()
+print(FPidentity.dtype.names)
 ```
 
 ```{python}
-qp.assign_pix2tes(1)
+print(FPidentity.index, type(FPidentity))
+```
+
+```{python}
+print(FPidentity[900].quadrant)
+```
+
+```{python}
+q3arr = np.array([])
+for i in range(len(FPidentity.PIX)):
+    #print(FPidentity[i].PIX)
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        q3arr = np.append(q3arr, FPidentity[i].TES)
+```
+
+```{python}
+print(q3arr.shape)
+print(q3arr)
+q3arr = np.flip(q3arr)
+```
+
+```{python}
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+for i in range(len(vtxs[:,0,0])):
+    cenx = (vtxs[i,0,0] + vtxs[i,2,0]) / 2
+    ceny = (vtxs[i,0,1] + vtxs[i,2,1]) / 2
+    plt.plot(cenx, ceny, 'rs')
+    plt.text(cenx+0.0002, ceny+0.0003,'Pix{}'.format(i+1))
+    
+    if i <= 123:
+        plt.text(cenx, ceny-0.0009,'T{}A2'.format(int(q3arr[i])))
+    else:
+        plt.text(cenx, ceny-0.0009,'T{}A1'.format(int(q3arr[i])))
 ```
 
 ```{python}
