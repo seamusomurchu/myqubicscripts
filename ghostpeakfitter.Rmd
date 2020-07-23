@@ -609,19 +609,67 @@ print(pxar.shape)
 ```
 
 ```{python}
+"""plot the TES on FP with angle and ratio"""
+plt.rc('font', **font)
 plt.figure(figsize=(14,14))
 plt.axis('equal')
+plt.xlabel('FPRF [m]')
+plt.ylabel('FPRF [m]')
 for i in range(len(vtxs[:,0,0])):
     cenx = (vtxs[i,0,0] + vtxs[i,2,0]) / 2
     ceny = (vtxs[i,0,1] + vtxs[i,2,1]) / 2
-    plt.plot(cenx, ceny, 'rs')
+    plt.plot(cenx, ceny, 's', color=current_palette[0])
     #plt.text(cenx+0.0002, ceny+0.0003,'Pix{}'.format(i+1), fontsize=10)
     plt.text(cenx+0.0002, ceny-0.0009,'TES {}'.format(int(q3arr[i])), fontsize=10)
     
 for i in range(len(pxar)):
-    plt.plot(pxar[i], pyar[i], 'bs')
+    plt.plot(pxar[i], pyar[i], 's', color=current_palette[1])
     plt.text(pxar[i]+0.0002, pyar[i]+0.0004,'TES {}'.format(int(tesnums[i])), fontsize=10)
-    plt.text(pxar[i]+0.0002, pyar[i]-0.0003,'{:3.2f}$^\circ$'.format(newarr[i,7]), fontsize=10)
+    plt.text(pxar[i]+0.0002, pyar[i]-0.0003,'{:3.2f}$^\circ$'.format(newarr[i,8]), fontsize=10)
+    plt.text(pxar[i]-0.0025, pyar[i]-0.0003,'aR{:3.2f}'.format(newarr[i,7]), fontsize=10)
+```
+
+```{python}
+"""maybe fit a line and see if statitstically significant, does this indicate optical or electrical cause"""
+from scipy import stats
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+r = np.sqrt(pxar**2 + pyar**2)
+slope, intercept, r_value, p_value, std_err = stats.linregress(r,newarr[:,8])
+abline_values = [slope * i + intercept for i in r]
+plt.figure(figsize=(16,8))
+plt.plot(r, newarr[:,8], '.', color=current_palette[0], markersize=20)
+plt.plot(r, abline_values, color=current_palette[0], lw=5,
+         label='$r^2$ = {:3.2f}'.format(r_value**2))
+plt.xlabel('Radius [mm]')
+plt.ylabel("Angle [$^\circ$]")
+plt.legend()
+#plt.savefig("/home/james/ghostimages/plots/randangle", bbox_inches='tight')
+```
+
+```{python}
+"""Same plot for ratios"""
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+r = np.sqrt(pxar**2 + pyar**2)
+slope, intercept, r_value, p_value, std_err = stats.linregress(r, newarr[:,7])
+abline_values = [slope * i + intercept for i in r]
+
+plt.figure(figsize=(16,8))
+plt.plot(r, newarr[:,7], '.', color=current_palette[3], markersize=20)
+plt.plot(r, abline_values, color=current_palette[3], lw=5,
+         label='$r^2$ = {:3.6f}'.format(r_value**2))
+plt.xlabel('Radius [mm]')
+plt.ylabel("Amplitude Ratio")
+plt.legend()
+#plt.savefig("/home/james/ghostimages/plots/randangle", bbox_inches='tight')
 ```
 
 ```{python}

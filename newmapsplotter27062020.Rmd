@@ -1,0 +1,89 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import qubic.sb_fitting as sbfit
+import qubic.fibtools as ft
+from pysimulators import FitsArray as fa
+
+```
+
+```{python}
+mm, ss = ft.meancut(mapdata[TESNum-1,:,:],3)
+imshow(-mapdata[TESNum-1,:,:], aspect='equal',
+       extent=[np.cos(np.radians(50))*azmin, np.cos(np.radians(50))*azmax, elmin, elmax],
+       vmin=mm-3*ss, vmax=mm+50*ss)
+```
+
+```{python}
+"""load all flatmaps"""
+
+dirfile = '/home/james/synthbeamdata/2020-06-27/Flat'
+TESNum = 98
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile)
+
+c50 = np.cos(np.radians(50))
+azmin = min(az)/c50
+azmax = max(az)/c50
+flatmaps = np.zeros([256, 201, 201])
+tesar = np.linspace(1, 256, 256)
+
+
+
+for i, tes in enumerate(tesar):
+
+    flatmap, az, el = sbfit.get_flatmap(int(tes), dirfile, azmin = azmin, azmax=azmax)
+    #flatmap = np.flip(flatmap)
+    flatmaps[i, :, :] = flatmap
+print(flatmaps.shape)
+```
+
+```{python}
+"""do big plot all TES"""
+"""make nice pdf like JC"""
+
+plt.rc('figure',figsize=(16,8))
+nnx = 5
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+elmin = min(el)
+elmax = max(el)
+azmin = min(az)
+azmax = max(az)
+
+for k in range(nplots):
+    plt.figure()
+    for i in range(nnx*nny):
+        ites = i+k*nnx*nny
+        if ites < 256:
+            plt.subplot(nny,nnx,i+1)
+            mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+            
+            plt.imshow(flatmaps[ites,:,:], aspect='equal', origin='lower',
+                   extent=[np.min(az), np.max(az), np.min(el), np.max(el)],
+            vmin=mm-3*ss, vmax=mm+50*ss)
+
+            plt.title('TES {} 2020-06-26'.format(int(tesar[ites])), fontsize=16)
+            plt.savefig('/home/james/synthbeamdata/2020-06-26/imagescontrast/jj{}.png'.format(k), bbox_inches='tight')
+    plt.tight_layout()
+    plt.show()
+```
+
+```{python}
+
+```
