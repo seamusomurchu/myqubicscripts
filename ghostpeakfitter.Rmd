@@ -469,7 +469,7 @@ plt.plot(newarr[0], newarr[6], '.', color=current_palette[2], markersize=20, lab
 plt.ylabel("Peak Amplitude")
 plt.legend(loc='upper center')
 
-plt.savefig("/home/james/ghostimages/plots/amplitudes", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/plots/amplitudes", bbox_inches='tight')
 ```
 
 ```{python}
@@ -497,7 +497,7 @@ plt.plot(newarr[0], np.ones(len(newarr[7]))*sdp2,
 plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
 
 plt.legend(loc=(0.07, 0.75))
-plt.savefig("/home/james/ghostimages/plots/amplitudesSDEV", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/plots/amplitudesSDEV", bbox_inches='tight')
 ```
 
 ```{python}
@@ -519,7 +519,7 @@ n, bins, patches = plt.hist(newarr[7], bins='auto', facecolor=current_palette[3]
 plt.xlabel('Amplitude Ratio')
 plt.ylabel('Counts')
 
-plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
 ```
 
 ```{python}
