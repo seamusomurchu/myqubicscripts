@@ -686,7 +686,7 @@ plt.legend()
 col1 = np.array([29, 30, 31, 32, 25, 26, 27, 28, 21, 22, 23, 24, 17, 18, 19, 20, 13, 14, 15, 16, 
                  9, 10, 11, 12, 5, 6, 7, 8, 1, 2, 3, 4])
 col2 = np.array([61, 62, 63, 64, 57, 58, 59, 60, 53, 54, 55, 56, 49, 50, 51, 52, 45, 46, 47, 
-                 48, 41, 42, 43, 44, 37, 38, 39, 39, 40, 33, 34,35, 36])
+                 48, 41, 42, 43, 44, 37, 38, 39, 40, 33, 34, 35, 36])
 col3 = np.array([93, 94, 95, 96, 89, 90, 91, 92, 85, 86, 87, 88, 81, 82, 83, 84, 77, 78, 79, 
                  80, 73, 74, 75, 76, 69, 70, 71, 72, 65, 66, 67, 68])
 col4 = np.array([125, 126, 127, 128, 121, 122, 123, 124, 117, 118, 119, 120, 113, 114, 115, 116,
@@ -713,19 +713,22 @@ font = {'family': 'serif',
 plt.figure(figsize=(14,14))
 plt.axis('equal')
 
+px = np.array([])
+py = np.array([])
+
 j=248
 for i in range(len(FPidentity.PIX)):
     if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
         cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
         ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
                     
-        plt.plot(cenx, ceny, 's', color=current_palette[0])
-        plt.text(cenx+0.00025, ceny+0.0003,'Pix{}'.format(j), fontsize=10)
+        #plt.plot(cenx, ceny, 's', color=current_palette[0])
+        #plt.text(cenx+0.00025, ceny+0.0003,'Pix{}'.format(j), fontsize=10)
         plt.text(cenx+0.00025, ceny-0.00035,'TES{}'.format(int(FPidentity[i].TES)), fontsize=10)
         #plt.text(cenx+0.00025, ceny-0.001,'ASC{}'.format(int(FPidentity[i].ASIC)), fontsize=10)
         
-        if FPidentity[i].ASIC == 2:
-            plt.plot(cenx, ceny, 's', color=current_palette[4])
+        #if FPidentity[i].ASIC == 2:
+            #plt.plot(cenx, ceny, 's', color=current_palette[4])
         
         if FPidentity[i].ASIC == 1 and FPidentity[i].TES in carra1:
             plt.plot(cenx, ceny, 's', color=current_palette[1])
@@ -741,7 +744,7 @@ for i in range(len(FPidentity.PIX)):
     if FPidentity[i].ASIC == 2 and FPidentity[i].TES in col1:
         plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[5])
     if FPidentity[i].ASIC == 2 and FPidentity[i].TES in col2:
-        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[6])
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[9])
     if FPidentity[i].ASIC == 2 and FPidentity[i].TES in col3:
         plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[7])
     if FPidentity[i].ASIC == 2 and FPidentity[i].TES in col4:
@@ -761,11 +764,118 @@ plt.ylabel('Y [m] FPRF')
 ```
 
 ```{python}
+"""should build an array with TES numbers, PIX numbers, px, py, squid numbers, columns etc. for """
+"""then plot squid number per column with each TES"""
+px = np.array([])
+py = np.array([])
+idxs = np.array([])
+tesa = np.array([])
+asica = np.array([])
+squida = np.array([])
+cola = np.array([])
+#for some reason vertex arrays are in reverse index order so start j=248
+j=248
+for i in range(len(FPidentity.PIX)):
+    #find the 3rd TD quadrant and only select bolometers, deselect tempTES like this
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        #find the centers of the pixels from the vertex array
+        cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
+        ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
+        #add pixel locations for each bolometer
+        px = np.append(px, cenx)
+        py = np.append(py, ceny)
+        #reverse the indexing
+        j -= 1
+        #build index, tes, asic arrays
+        idxs = np.append(idxs, i)
+        tesa = np.append(tesa, FPidentity[i].TES)
+        asica = np.append(asica, FPidentity[i].ASIC)
+        #build squid numbering array
+        for k, p in enumerate(col1):
+            if p == FPidentity[i].TES:
+                #print(k,p, FPidentity[i].TES)
+                squida = np.append(squida, k+1)
+                cola = np.append(cola, 1)
+        for k, p in enumerate(col2):
+            if p == FPidentity[i].TES:
+                squida = np.append(squida, k+1)
+                cola = np.append(cola, 2)
+        for k, p in enumerate(col3):
+            if p == FPidentity[i].TES:
+                squida = np.append(squida, k+1)
+                cola = np.append(cola, 3)
+        for k, p in enumerate(col4):
+            if p == FPidentity[i].TES:
+                squida = np.append(squida, k+1)
+                cola = np.append(cola, 4)
+```
 
+```{python}
+print(px.shape, py.shape, idxs.shape, tesa.shape, asica.shape, squida.shape, cola.shape)
+print(squida[0], cola[0])
+print(squida)
+print(cola)
+print(len(col1)+len(col2)+len(col3)+len(col4))
+print(len(col1), len(col2), len(col3), len(col4))
+```
+
+```{python}
+"""try the same plot with additional/different info"""
+from matplotlib import colors as mcolors
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+
+for i in range(len(px)):
+    plt.plot(px[i], py[i], 'bs')
+    plt.text(px[i]+0.00025, py[i]+0.0004, "TES{}".format(int(tesa[i])), fontsize=10)
+    plt.text(px[i]+0.00025, py[i]-0.0004, "SQD{}".format(int(squida[i])), fontsize=10)
+    
+    if cola[i] == 1 and asica[i] == 1:
+        plt.plot(px[i], py[i], 'rs')
+    if cola[i] == 2 and asica[i] == 1:
+        plt.plot(px[i], py[i], 'gs')
+    if cola[i] == 3 and asica[i] == 1:
+        plt.plot(px[i], py[i], 'bs')
+    if cola[i] == 4 and asica[i] == 1:
+        plt.plot(px[i], py[i], 'ms')
+    if cola[i] == 1 and asica[i] == 2:
+        plt.plot(px[i], py[i], 'ks')
+    if cola[i] == 2 and asica[i] == 2:
+        plt.plot(px[i], py[i], 'ys')
+    if cola[i] == 3 and asica[i] == 2:
+        plt.plot(px[i], py[i], 'cs')
+    if cola[i] == 4 and asica[i] == 2:
+        plt.plot(px[i], py[i], 's', color='tab:orange')
+        
+    if asica[i] == 1 and tesa[i] in carra1:
+        plt.plot(px[i], py[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
+    if asica[i] == 2 and tesa[i] in carra2:
+        plt.plot(px[i], py[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
+        
+plt.rcParams['axes.facecolor'] = 'honeydew'
+```
+
+```{python}
+"""try see if squid number relationship"""
+print(carra1.shape, carra2.shape)
+sqa = np.array([])
+
+for i in range(len(px)):
+    if asica[i] == 1:
+        for i in carra1:
+            if carra[i] in 
+            
 ```
 
 ```{python}
 """HERE BE DRAGONS... all just test code below"""
+
 ```
 
 ```{python}
