@@ -863,14 +863,21 @@ plt.rcParams['axes.facecolor'] = 'honeydew'
 
 ```{python}
 """try see if squid number relationship"""
-print(carra1.shape, carra2.shape)
+plt.rcParams['axes.facecolor'] = 'w'
+print(carra1.shape, carra2.shape, px.shape)
 sqa = np.array([])
 
 for i in range(len(px)):
-    if asica[i] == 1:
-        for i in carra1:
-            if carra[i] in 
-            
+    if asica[i] == 1 and tesa[i] in carra1:
+        sqa = np.append(sqa, squida[i])
+    if asica[i] == 2 and tesa[i] in carra2:
+        sqa = np.append(sqa, squida[i])
+print(sqa.shape, len(np.unique(sqa)))
+#plt.plot(np.linspace(1, len(col1), len(col1)), sqa, '.')
+plt.figure()
+plt.plot(sqa, '.')
+plt.figure()
+plt.hist(sqa, bins=np.linspace(1, len(col1), len(col1)))
 ```
 
 ```{python}
