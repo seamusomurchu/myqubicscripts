@@ -35,7 +35,7 @@ print(tesarray.shape)
 print(tesarray)
 complist = [16, 22, 24, 27, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
     170, 171, 172, 181, 201, 208, 210, 213, 216, 218, 219]
-correctTESarr = [22, 24, 27, 51, 58, 59, 74, 75, 76, 86, 93, 106, 107, 11]
+#correctTESarr = [22, 24, 27, 51, 58, 59, 74, 75, 76, 86, 93, 106, 107, 11]
 
 ```
 
@@ -77,6 +77,86 @@ for i in range(len(vtxs[:,0,0])):
     plt.plot(cenx, ceny, 'rs')
     plt.text(cenx+0.0002, ceny+0.0003,'Pix{}'.format(i+1), fontsize=10)
     plt.text(cenx+0.0002, ceny-0.0009,'TES{}'.format(int(q3arr[i])), fontsize=10)
+    
+    
+```
+
+```{python}
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+j=248
+for i in range(len(FPidentity.PIX)):
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
+        ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
+        
+        #print(i, FPidentity[i].TES, FPidentity[i].ASIC, cenx, ceny)
+        
+        plt.plot(cenx, ceny, 'rs')
+        plt.text(cenx+0.00025, ceny+0.0003,'Pix{}'.format(j), fontsize=10)
+        plt.text(cenx+0.00025, ceny-0.00035,'TES{}'.format(int(FPidentity[i].TES)), fontsize=10)
+        plt.text(cenx+0.00025, ceny-0.001,'ASC{}'.format(int(FPidentity[i].ASIC)), fontsize=10)
+        
+        j -= 1
+```
+
+```{python}
+# print(FPidentity.dtype.names)
+# #print(len(FPidentity.PIX))
+# print(FPidentity.TES)
+# print(vtxs.shape)
+"""tesnums for plotting on FP here we want to correct the array so that asic 2 tesnums get subtracted by 124
+this does seem to make sense if you consider qubicpacks timeline data
+split into 2 asics"""
+carr = [ 22,  24,  27,  51,  58,  59,  74,  75,  76,  86,  93, 106, 107, 110,
+        120, 123, 134, 135, 138, 141, 166, 170, 171, 172, 201, 208, 213, 216,
+        218, 219]
+
+carra1 = np.array([])
+carra2 = np.array([])
+
+for i in range(len(carr)):
+    
+    if carr[i] >=124:
+        carra2 = np.append(carra2, carr[i]-123)
+        
+    else:
+        carra1 = np.append(carra1, carr[i])
+        
+print(carr)
+print(carra1)
+print(carra2)
+```
+
+```{python}
+"""repeat above plot with test TES carr"""
+
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+j=248
+for i in range(len(FPidentity.PIX)):
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
+        ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
+        
+        #print(i, FPidentity[i].TES, FPidentity[i].ASIC, cenx, ceny)
+        
+        plt.plot(cenx, ceny, 'rs')
+        plt.text(cenx+0.00025, ceny+0.0003,'Pix{}'.format(j), fontsize=10)
+        plt.text(cenx+0.00025, ceny-0.00035,'TES{}'.format(int(FPidentity[i].TES)), fontsize=10)
+        plt.text(cenx+0.00025, ceny-0.001,'ASC{}'.format(int(FPidentity[i].ASIC)), fontsize=10)
+        
+        #if FPidentity[i].TES
+        
+        if FPidentity[i].ASIC == 1 and FPidentity[i].TES in carra1:
+            plt.plot(cenx, ceny, 'bs')
+            
+        if FPidentity[i].ASIC == 2 and FPidentity[i].TES in carra2:
+            plt.plot(cenx, ceny, 'gs')
+        
+        j -= 1
 ```
 
 ```{python}

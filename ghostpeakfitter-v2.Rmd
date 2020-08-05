@@ -658,7 +658,7 @@ plt.plot(r, abline_values, color=current_palette[0], lw=5,
 plt.xlabel('Radius [m]')
 plt.ylabel("Angle [$^\circ$]")
 plt.legend()
-plt.savefig("/home/james/ghostimages/plots/randanglev2", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/plots/randanglev2", bbox_inches='tight')
 ```
 
 ```{python}
@@ -827,6 +827,7 @@ font = {'family': 'serif',
         'weight': 'bold',
         'size': 14,
         }
+plt.rcParams['axes.facecolor'] = 'honeydew'
 plt.figure(figsize=(14,14))
 plt.axis('equal')
 
@@ -858,12 +859,13 @@ for i in range(len(px)):
     if asica[i] == 2 and tesa[i] in carra2:
         plt.plot(px[i], py[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
         
-plt.rcParams['axes.facecolor'] = 'honeydew'
+
 ```
 
 ```{python}
 """try see if squid number relationship"""
 plt.rcParams['axes.facecolor'] = 'w'
+
 print(carra1.shape, carra2.shape, px.shape)
 sqa = np.array([])
 
@@ -874,15 +876,130 @@ for i in range(len(px)):
         sqa = np.append(sqa, squida[i])
 print(sqa.shape, len(np.unique(sqa)))
 #plt.plot(np.linspace(1, len(col1), len(col1)), sqa, '.')
-plt.figure()
+plt.figure(figsize=(16,8))
 plt.plot(sqa, '.')
-plt.figure()
-plt.hist(sqa, bins=np.linspace(1, len(col1), len(col1)))
+plt.figure(figsize=(16,8))
+plt.hist(sqa, bins=np.linspace(1, len(col1), len(col1)), facecolor=current_palette[0],rwidth=0.95)
+plt.xlabel('Squid Columns (ASIC1&2)')
+```
+
+```{python}
+"""do a stacked bar chart with each color a different squid column on asics"""
+
+colar11 = np.array([])
+colar12 = np.array([])
+colar13 = np.array([])
+colar14 = np.array([])
+colar21 = np.array([])
+colar22 = np.array([])
+colar23 = np.array([])
+colar24 = np.array([])
+
+for i in range(len(px)):
+    #here we check asic number and if tes is a ghost tes
+    #and if that ghost tes is in column of the squidasic
+    #then we add to array if ghosted as 1, else 0
+    if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 1:
+        #print(tesa[i], asica[i], cola[i])
+        colar21 = np.append(colar21, 1)
+    if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 1:
+        #print("not in")
+        colar21 = np.append(colar21, 0)
+    #do column2 asic 2
+    if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 2:
+        #print(tesa[i], asica[i], cola[i])
+        colar22 = np.append(colar22, 1)        
+    if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 2:
+        #print("not in")
+        colar22 = np.append(colar22, 0)
+    #do column3 asic 2
+    if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 3:
+        #print(tesa[i], asica[i], cola[i])
+        colar23 = np.append(colar23, 1)        
+    if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 3:
+        #print("not in")
+        colar23 = np.append(colar23, 0)
+    #do column4 asic 2
+    if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 4:
+        #print(tesa[i], asica[i], cola[i])
+        colar24 = np.append(colar24, 1)        
+    if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 4:
+        #print("not in")
+        colar24 = np.append(colar24, 0)
+#now do the same for asic1
+    if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 1:
+        #print(tesa[i], asica[i], cola[i])
+        colar11 = np.append(colar11, 1)
+    if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 1:
+        #print("not in")
+        colar11 = np.append(colar11, 0)
+    #do column2 asic 2
+    if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 2:
+        #print(tesa[i], asica[i], cola[i])
+        colar12 = np.append(colar12, 1)        
+    if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 2:
+        #print("not in")
+        colar12 = np.append(colar12, 0)
+    #do column3 asic 2
+    if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 3:
+        #print(tesa[i], asica[i], cola[i])
+        colar13 = np.append(colar13, 1)        
+    if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 3:
+        #print("not in")
+        colar13 = np.append(colar13, 0)
+    #do column4 asic 2
+    if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 4:
+        #print(tesa[i], asica[i], cola[i])
+        colar14 = np.append(colar14, 1)        
+    if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 4:
+        #print("not in")
+        colar14 = np.append(colar14, 0)
+```
+
+```{python}
+
+print(colar21.shape, len(colar21), colar21)
+print(colar22.shape, len(colar22), colar22)
+print(colar23, colar23.shape)
+print(colar24, colar24.shape)
+print(colar14)
+```
+
+```{python}
+#cols = np.add(colar11, colar12, colar13, colar14, colar21, colar22, colar23)
+cols = np.add(colar11, colar12, colar13).tolist()
+r = np.linspace(1, len(colar21), len(colar21))
+#names = ["Col1ASIC1", "COL2ASIC1"]
+width=1
+plt.figure(figsize=(16,8))
+plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width)
+plt.bar(r, colar12, color=current_palette[1], edgecolor='white', width=width, bottom=colar11)
+plt.bar(r, colar13, color=current_palette[2], edgecolor='white', width=width, bottom=colar11+colar12)
+plt.bar(r, colar14, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13)
+plt.bar(r, colar21, color=current_palette[4], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14)
+plt.bar(r, colar22, color=current_palette[5], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21)
+plt.bar(r, colar23, color=current_palette[6], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar22)
+plt.bar(r, colar24, color=current_palette[7], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar23)
+```
+
+```{python}
+x = np.vstack([colar11, colar12, colar13, colar14, colar21, colar22, colar23, colar24]).T
+print(x.shape)
+n_bins=len(colar21)
+labels = ["ASIC1COL1", "ASIC1COL2", "ASIC1COL3", "ASIC1COL4", "ASIC2COL1", "ASIC2COL2", "ASIC2COL3", "ASIC2COL4"]
+plt.hist(x, n_bins, histtype='bar', stacked=True, label=labels)
+plt.legend(loc="upper right")
+plt.title('Stacked-histogram ')
+plt.show()
 ```
 
 ```{python}
 """HERE BE DRAGONS... all just test code below"""
-
+2000
 ```
 
 ```{python}
