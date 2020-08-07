@@ -66,243 +66,247 @@ plt.grid(True)
 ```
 
 ```{python}
-AZ, EL = np.meshgrid(az, el)
-testmap = flatmaps[2,:,:]
-plt.figure(figsize=(10,10))
-plt.scatter(AZ.ravel(), EL.ravel(), c=testmap.ravel())
-plt.xticks(np.arange(min(az), max(az), step=2))
-plt.yticks(np.arange(min(el), max(el), step=2))
-plt.grid(True)
+# AZ, EL = np.meshgrid(az, el)
+# testmap = flatmaps[2,:,:]
+# plt.figure(figsize=(10,10))
+# plt.scatter(AZ.ravel(), EL.ravel(), c=testmap.ravel())
+# plt.xticks(np.arange(min(az), max(az), step=2))
+# plt.yticks(np.arange(min(el), max(el), step=2))
+# plt.grid(True)
 ```
 
 ```{python}
-azval = 2.1
-elval = 52
-initial_guess = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
+# azval = 2.1
+# elval = 52
+# initial_guess = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
 
-fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
-data_fitted = twoD_Gaussian((AZ, EL), *fit_params)
-fit_errors = np.sqrt(np.diag(cov_mat))
+# fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
+# data_fitted = twoD_Gaussian((AZ, EL), *fit_params)
+# fit_errors = np.sqrt(np.diag(cov_mat))
 
-print('Fit Amplitude:', fit_params[0], '\u00b1', fit_errors[0])
-print('Fit X-Center: ', fit_params[1], '\u00b1', fit_errors[1])
-print('Fit Y-Center: ', fit_params[2], '\u00b1', fit_errors[2])
-print('Fit X-Sigma:  ', fit_params[3], '\u00b1', fit_errors[3])
-print('Fit Y-Sigma:  ', fit_params[4], '\u00b1', fit_errors[4])
+# print('Fit Amplitude:', fit_params[0], '\u00b1', fit_errors[0])
+# print('Fit X-Center: ', fit_params[1], '\u00b1', fit_errors[1])
+# print('Fit Y-Center: ', fit_params[2], '\u00b1', fit_errors[2])
+# print('Fit X-Sigma:  ', fit_params[3], '\u00b1', fit_errors[3])
+# print('Fit Y-Sigma:  ', fit_params[4], '\u00b1', fit_errors[4])
 
-plt.figure(figsize=(10,10))
-plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
-        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+# plt.figure(figsize=(10,10))
+# plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+#         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+# plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
 ```
 
 ```{python}
-"""build a list or arrays of ghost centers OR do fits and acceptance criteria, 
-this method needs supervision
-add fit parameters to arrays to quantify
-perhaps pandas useful here"""
-# %matplotlib qt
-plt.figure(figsize=(10,10))
-plt.subplots(121)
-plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
-        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-plt.title("TES {}".format(tes))
-plt.xlabel("Azimuth [$^\circ$]")
-plt.ylabel("Elevation [$^\circ$]")
-#get peaks from plot
-var1, var2 = plt.ginput(2)
-print(var1[0], var1[1])
+# """build a list or arrays of ghost centers OR do fits and acceptance criteria, 
+# this method needs supervision
+# add fit parameters to arrays to quantify
+# perhaps pandas useful here"""
+# # %matplotlib qt
+# plt.figure(figsize=(10,10))
+# plt.subplots(121)
+# plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+#         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+# plt.title("TES {}".format(tes))
+# plt.xlabel("Azimuth [$^\circ$]")
+# plt.ylabel("Elevation [$^\circ$]")
+# #get peaks from plot
+# var1, var2 = plt.ginput(2)
+# print(var1[0], var1[1])
 
-#set up fitting
-initial_guess1 = (max(testmap.ravel()), var1[0], var1[1], 1, 1, 0, 0)
-initial_guess2 = (max(testmap.ravel()), var2[0], var2[1], 1, 1, 0, 0)
-fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess1)
-fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess2)
-data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
-data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
-fit_errors1 = np.sqrt(np.diag(cov_mat1))
-fit_errors2 = np.sqrt(np.diag(cov_mat2))
+# #set up fitting
+# initial_guess1 = (max(testmap.ravel()), var1[0], var1[1], 1, 1, 0, 0)
+# initial_guess2 = (max(testmap.ravel()), var2[0], var2[1], 1, 1, 0, 0)
+# fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess1)
+# fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess2)
+# data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+# data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
+# fit_errors1 = np.sqrt(np.diag(cov_mat1))
+# fit_errors2 = np.sqrt(np.diag(cov_mat2))
 
-#calculate angle
-dx = fit_params2[1] - fit_params1[1]
-dy = fit_params2[2] - fit_params1[2]
-ang = np.rad2deg(math.atan2(dy, dx))
-print(ang)
+# #calculate angle
+# dx = fit_params2[1] - fit_params1[1]
+# dy = fit_params2[2] - fit_params1[2]
+# ang = np.rad2deg(math.atan2(dy, dx))
+# print(ang)
 
-#plot contour fits and text do second plot
-plt.subplots(121)
-plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
-        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-plt.title("TES {} Ghost Fitting".format(tes))
-plt.xlabel("Azimuth [$^\circ$]")
-plt.ylabel("Elevation [$^\circ$]")
-plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k', label='Peak 1')
-plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
-plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
-plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
-plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+# #plot contour fits and text do second plot
+# plt.subplots(121)
+# plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+#         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+# plt.title("TES {} Ghost Fitting".format(tes))
+# plt.xlabel("Azimuth [$^\circ$]")
+# plt.ylabel("Elevation [$^\circ$]")
+# plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k', label='Peak 1')
+# plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
+# plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+# plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
+# plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
 
-#add relavant vars to arrays... once in the loop
-#plt.savefig("/home/james/ghostimages/ghostfits/ghostfits{}".format(tes))
-plt.pause(5)
-plt.close()
+# #add relavant vars to arrays... once in the loop
+# #plt.savefig("/home/james/ghostimages/ghostfits/ghostfits{}".format(tes))
+# plt.pause(5)
+# plt.close()
 ```
 
 ```{python}
-"""build arrays during loop to make satitistics
-should have fitted centers for both fits, amps, ampratio, relative angle
-I also need a way to tell during click fitting if fits are good
-maybe just take notes as i loop
-save fits as png"""
-# %matplotlib qt
-#new complist removes bad fits helps error exeptions
-#remove 9, 50, 186
-complist = [16, 22, 24, 27, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
-    170, 171, 172, 181, 201, 208, 210, 213, 216, 218, 219]
-#testcomplist
-#complist = [16, 22, 24]
+# """build arrays during loop to make satitistics
+# should have fitted centers for both fits, amps, ampratio, relative angle
+# I also need a way to tell during click fitting if fits are good
+# maybe just take notes as i loop
+# save fits as png"""
+# # %matplotlib qt
+# #new complist removes bad fits helps error exeptions
+# #remove 9, 50, 186
+# complist = [16, 22, 24, 27, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+#     170, 171, 172, 181, 201, 208, 210, 213, 216, 218, 219]
+# #testcomplist
+# #complist = [16, 22, 24]
 
-#print(len(complist))
-fit1x = np.zeros(len(complist))
-fit1y = np.zeros(len(complist))
-fit2x = np.zeros(len(complist))
-fit2y = np.zeros(len(complist))
-amp1 = np.zeros(len(complist))
-amp2 = np.zeros(len(complist))
-ampr = np.zeros(len(complist))
-angle = np.zeros(len(complist))
-tesnum = np.zeros(len(complist))
-fitsdata1 = np.zeros((len(complist),101,101))
-fitsdata2 = np.zeros((len(complist),101,101))
+# #print(len(complist))
+# fit1x = np.zeros(len(complist))
+# fit1y = np.zeros(len(complist))
+# fit2x = np.zeros(len(complist))
+# fit2y = np.zeros(len(complist))
+# amp1 = np.zeros(len(complist))
+# amp2 = np.zeros(len(complist))
+# ampr = np.zeros(len(complist))
+# angle = np.zeros(len(complist))
+# tesnum = np.zeros(len(complist))
+# fitsdata1 = np.zeros((len(complist),101,101))
+# fitsdata2 = np.zeros((len(complist),101,101))
 
-for i, tes in enumerate(complist):
+# for i, tes in enumerate(complist):
 
-    #do plot
-    plt.figure(figsize=(10,10))
-    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
-            extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-    plt.title("TES {}".format(tes))
-    plt.xlabel("Azimuth [$^\circ$]")
-    plt.ylabel("Elevation [$^\circ$]")
-    #get peaks from plot
-    var1, var2 = plt.ginput(2)
+#     #do plot
+#     plt.figure(figsize=(10,10))
+#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+#             extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+#     plt.title("TES {}".format(tes))
+#     plt.xlabel("Azimuth [$^\circ$]")
+#     plt.ylabel("Elevation [$^\circ$]")
+#     #get peaks from plot
+#     var1, var2 = plt.ginput(2)
     
-    #set up fitting
-    initial_guess1 = (max(flatmaps[i,:,:].ravel()), var1[0], var1[1], 1, 1, 0, 0)
-    initial_guess2 = (max(flatmaps[i,:,:].ravel()), var2[0], var2[1], 1, 1, 0, 0)
-    fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess1)
-    fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess2)
-    data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
-    data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
-    fit_errors1 = np.sqrt(np.diag(cov_mat1))
-    fit_errors2 = np.sqrt(np.diag(cov_mat2))
+#     #set up fitting
+#     initial_guess1 = (max(flatmaps[i,:,:].ravel()), var1[0], var1[1], 1, 1, 0, 0)
+#     initial_guess2 = (max(flatmaps[i,:,:].ravel()), var2[0], var2[1], 1, 1, 0, 0)
+#     fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess1)
+#     fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess2)
+#     data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+#     data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
+#     fit_errors1 = np.sqrt(np.diag(cov_mat1))
+#     fit_errors2 = np.sqrt(np.diag(cov_mat2))
     
-    #calculate angle
-    dx = fit_params2[1] - fit_params1[1]
-    dy = fit_params2[2] - fit_params1[2]
-    ang = np.rad2deg(math.atan2(dy, dx))
-    #print(ang)
-    #plot contour fits and text
-    plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
-    plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
-    plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
-    plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
-    plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+#     #calculate angle
+#     dx = fit_params2[1] - fit_params1[1]
+#     dy = fit_params2[2] - fit_params1[2]
+#     ang = np.rad2deg(math.atan2(dy, dx))
+#     #print(ang)
+#     #plot contour fits and text
+#     plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
+#     plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
+#     plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+#     plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
+#     plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
 
-    #append arrays
-    tesnum[i] = tes
-    fit1x[i] = fit_params1[1]
-    fit1y[i] = fit_params1[2]
-    fit2x[i] = fit_params2[1]
-    fit2y[i] = fit_params2[2]
-    amp1[i] = fit_params1[0]
-    amp2[i] = fit_params2[0]
-    ampr[i] = fit_params1[0] / fit_params2[0]
-    angle[i] = ang
-    fitsdata1[i, :, :] = data_fitted1.reshape(101, 101)
-    fitsdata2[i, :, :] = data_fitted2.reshape(101, 101)
+#     #append arrays
+#     tesnum[i] = tes
+#     fit1x[i] = fit_params1[1]
+#     fit1y[i] = fit_params1[2]
+#     fit2x[i] = fit_params2[1]
+#     fit2y[i] = fit_params2[2]
+#     amp1[i] = fit_params1[0]
+#     amp2[i] = fit_params2[0]
+#     ampr[i] = fit_params1[0] / fit_params2[0]
+#     angle[i] = ang
+#     fitsdata1[i, :, :] = data_fitted1.reshape(101, 101)
+#     fitsdata2[i, :, :] = data_fitted2.reshape(101, 101)
     
     
-    #add relavant vars to arrays... once in the loop
-    plt.savefig("/home/james/ghostimages/ghostfitsr2/ghostfits{}".format(tes), bbox_inches='tight')
-    plt.pause(3)
-    plt.close()
+#     #add relavant vars to arrays... once in the loop
+#     plt.savefig("/home/james/ghostimages/ghostfitsr2/ghostfits{}".format(tes), bbox_inches='tight')
+#     plt.pause(3)
+#     plt.close()
 ```
 
 ```{python}
-"""make nice pdf like JC"""
+# """make nice pdf like JC"""
 
-plt.rc('figure',figsize=(16,8))
-nnx = 5
-nny=2
-k=0
-nplots = int(256/nnx/nny)+1
+# plt.rc('figure',figsize=(16,8))
+# nnx = 5
+# nny=2
+# k=0
+# nplots = int(256/nnx/nny)+1
 
-elmin = min(el)
-elmax = max(el)
-azmin = min(az)
-azmax = max(az)
+# elmin = min(el)
+# elmax = max(el)
+# azmin = min(az)
+# azmax = max(az)
 
 
-for k in range(nplots):
-    plt.figure()
-    for i in range(nnx*nny):
-        ites = i+k*nnx*nny
-        if ites < 256:
-            plt.subplot(nny,nnx,i+1)
-            mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+# for k in range(nplots):
+#     plt.figure()
+#     for i in range(nnx*nny):
+#         ites = i+k*nnx*nny
+#         if ites < 256:
+#             plt.subplot(nny,nnx,i+1)
+#             mm, ss = ft.meancut(flatmaps[ites,:,:],3)
             
-            plt.imshow(flatmaps[ites,:,:], aspect='equal', origin='lower',
-                   extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+#             plt.imshow(flatmaps[ites,:,:], aspect='equal', origin='lower',
+#                    extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
             
-            plt.contour(AZ, EL, fitsdata1[ites], 3, colors='k')
-            plt.contour(AZ, EL, fitsdata2[ites], 3, colors='r')
-            plt.text(fit1x[ites]+1, fit1y[ites]+4, "{:08.2f}".format(amp1[ites], prec=2), {'color': 'k', 'fontsize': 12})
-            plt.text(fit2x[ites]+1, fit2y[ites]+1, "{:08.2f}".format(amp2[ites], prec=2), {'color': 'r', 'fontsize': 12})
-            plt.text(fit1x[ites], fit1y[ites]-3, "Angle {:03.2f}".format(angle[ites], prec=2), {'color': 'b', 'fontsize': 12})
+#             plt.contour(AZ, EL, fitsdata1[ites], 3, colors='k')
+#             plt.contour(AZ, EL, fitsdata2[ites], 3, colors='r')
+#             plt.text(fit1x[ites]+1, fit1y[ites]+4, "{:08.2f}".format(amp1[ites], prec=2), {'color': 'k', 'fontsize': 12})
+#             plt.text(fit2x[ites]+1, fit2y[ites]+1, "{:08.2f}".format(amp2[ites], prec=2), {'color': 'r', 'fontsize': 12})
+#             plt.text(fit1x[ites], fit1y[ites]-3, "Angle {:03.2f}".format(angle[ites], prec=2), {'color': 'b', 'fontsize': 12})
 
-            plt.title('TES {} Ghost Fits'.format(int(tesnum[ites])), fontsize=16)
-            plt.savefig('/home/james/ghostimages/ghostfitsr2/jj{}.png'.format(k), bbox_inches='tight')
-    plt.tight_layout()
-    plt.show()
+#             plt.title('TES {} Ghost Fits'.format(int(tesnum[ites])), fontsize=16)
+#             plt.savefig('/home/james/ghostimages/ghostfitsr2/jj{}.png'.format(k), bbox_inches='tight')
+#     plt.tight_layout()
+#     plt.show()
 ```
 
 ```{python}
-# fitsdata1 = np.reshape(3,101,101)
-# fitsdata2 = np.reshape(3,101,101)
-print(fitsdata1.shape)
+# # fitsdata1 = np.reshape(3,101,101)
+# # fitsdata2 = np.reshape(3,101,101)
+# print(fitsdata1.shape)
 ```
 
 ```{python}
-""" do nice subplotter with raw and fits"""
-"""do comp list comparison plots"""
-# %matplotlib inline
-font = {'family': 'serif',
-        'color':  'black',
-        'weight': 'bold',
-        'size': 14,
-        }
+# """ do nice subplotter with raw and fits"""
+# """do comp list comparison plots"""
+# # %matplotlib inline
+# font = {'family': 'serif',
+#         'color':  'black',
+#         'weight': 'bold',
+#         'size': 14,
+#         }
 
-for i, tes in enumerate(complist):
+# for i, tes in enumerate(complist):
     
-    plt.figure(figsize=(16,6))
-    plt.subplot(1,2,1)
-    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
-            extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-    plt.title("TES {}".format(tes))
-    plt.xlabel("Azimuth [$^\circ$]")
-    plt.ylabel("Elevation [$^\circ$]")
+#     plt.figure(figsize=(16,6))
+#     plt.subplot(1,2,1)
+#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+#             extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+#     plt.title("TES {}".format(tes))
+#     plt.xlabel("Azimuth [$^\circ$]")
+#     plt.ylabel("Elevation [$^\circ$]")
     
-    #plot the ghost data
-    plt.subplot(1,2,2)
-    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
-            extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-    plt.title("TES {}".format(tes))
-    plt.xlabel("Azimuth [$^\circ$]")
-    plt.ylabel("Elevation [$^\circ$]")
-        #plot contour fits and text
-    plt.contour(AZ, EL, fitsdata1[i], 3, colors='k')
-    plt.contour(AZ, EL, fitsdata2[i], 3, colors='r')
+#     #plot the ghost data
+#     plt.subplot(1,2,2)
+#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+#             extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+#     plt.title("TES {}".format(tes))
+#     plt.xlabel("Azimuth [$^\circ$]")
+#     plt.ylabel("Elevation [$^\circ$]")
+#         #plot contour fits and text
+#     plt.contour(AZ, EL, fitsdata1[i], 3, colors='k')
+#     plt.contour(AZ, EL, fitsdata2[i], 3, colors='r')
+```
+
+```{python}
+"""load the data"""
 ```
 
 ```{python}
@@ -319,6 +323,10 @@ with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
 # fitsmat = np.vstack((fitsdata1, fitsdata2))
 # with open('fits_objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
 #     pickle.dump(fitsmat, f)
+```
+
+```{python}
+
 ```
 
 ```{python}
@@ -422,31 +430,31 @@ plt.ylabel('Counts')
 ```
 
 ```{python}
-"""load psfs"""
-"""load and plot simulation data"""
-psflist = np.array([6, 37, 50, 58, 76, 93])
+# """load psfs"""
+# """load and plot simulation data"""
+# psflist = np.array([6, 37, 50, 58, 76, 93])
 
-psfdata = np.zeros([6, 3, 251001])
-for i, tes in enumerate(psflist):
-    data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
-    psfdata[i,:,:] = data.T
+# psfdata = np.zeros([6, 3, 251001])
+# for i, tes in enumerate(psflist):
+#     data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
+#     psfdata[i,:,:] = data.T
     
 
 ```
 
 ```{python}
-"""do plpots"""
-for i, tes in enumerate(psflist):
+# """do plpots"""
+# for i, tes in enumerate(psflist):
 
-    plt.figure(figsize=(16,6))
-    plt.subplot(1,2,1)
-    plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
-    plt.title('Sim data TES {}'.format(tes))
+#     plt.figure(figsize=(16,6))
+#     plt.subplot(1,2,1)
+#     plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+#     plt.title('Sim data TES {}'.format(tes))
     
-    plt.subplot(1,2,2)
-    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
-        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
-    plt.title('Data TES {}'.format(tes))
+#     plt.subplot(1,2,2)
+#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+#     plt.title('Data TES {}'.format(tes))
 ```
 
 ```{python}
@@ -635,7 +643,7 @@ print(carr2.shape)
 ```
 
 ```{python}
-print(r.shape, newarr[8,:].shape)
+# print(r.shape, newarr[8,:].shape)
 ```
 
 ```{python}
@@ -836,7 +844,7 @@ for i in range(len(px)):
     plt.plot(px[i], py[i], 'bs')
     plt.text(px[i]+0.00025, py[i]+0.0004, "TES{}".format(int(tesa[i])), fontsize=10)
     plt.text(px[i]+0.00025, py[i]-0.0004, "SQD{}".format(int(squida[i])), fontsize=10)
-    plt.text(px[i]+0.00025, py[i]-0.0011, "ASC{}".format(int(asica[i])), fontsize=10)
+    plt.text(px[i]+0.00025, py[i]-0.0011, "COL{}".format(int(cola[i])), fontsize=10)
     
     if cola[i] == 1 and asica[i] == 1:
         plt.plot(px[i], py[i], 'rs')
@@ -864,6 +872,55 @@ for i in range(len(px)):
 ```
 
 ```{python}
+"""redo plot to make quadrant same as reference doc"""
+"""try the same plot with additional/different info"""
+from matplotlib import colors as mcolors
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+plt.rcParams['axes.facecolor'] = 'honeydew'
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+pxq = px*-1
+pyq = py*-1
+# pxq = px
+# pyq = py
+for i in range(len(px)):
+    plt.plot(pxq[i], pyq[i], 'bs')
+    plt.text(pxq[i]+0.00025, pyq[i]+0.0004, "TES{}".format(int(tesa[i])), fontsize=10)
+    plt.text(pxq[i]+0.00025, pyq[i]-0.0004, "SQD{}".format(int(squida[i])), fontsize=10)
+    plt.text(pxq[i]+0.00025, pyq[i]-0.0011, "COL{}".format(int(cola[i])), fontsize=10)
+    plt.text(pxq[i]+0.00025, pyq[i]-0.0018, "ASC{}".format(int(asica[i])), fontsize=10)
+    
+    if cola[i] == 1 and asica[i] == 1:
+        plt.plot(pxq[i], pyq[i], 'rs')
+    if cola[i] == 2 and asica[i] == 1:
+        plt.plot(pxq[i], pyq[i], 'gs')
+    if cola[i] == 3 and asica[i] == 1:
+        plt.plot(pxq[i], pyq[i], 'bs')
+    if cola[i] == 4 and asica[i] == 1:
+        plt.plot(pxq[i], pyq[i], 'ms')
+    if cola[i] == 1 and asica[i] == 2:
+        plt.plot(pxq[i], pyq[i], 'ks')
+    if cola[i] == 2 and asica[i] == 2:
+        plt.plot(pxq[i], pyq[i], 'ys')
+    if cola[i] == 3 and asica[i] == 2:
+        plt.plot(pxq[i], pyq[i], 'cs')
+    if cola[i] == 4 and asica[i] == 2:
+        plt.plot(pxq[i], pyq[i], 's', color='tab:orange')
+        
+    if asica[i] == 1 and tesa[i] in carra1:
+        plt.plot(pxq[i], pyq[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
+    if asica[i] == 2 and tesa[i] in carra2:
+        plt.plot(pxq[i], pyq[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
+        
+
+```
+
+```{python}
 """try see if squid number relationship"""
 plt.rcParams['axes.facecolor'] = 'w'
 
@@ -872,8 +929,10 @@ sqa = np.array([])
 
 for i in range(len(px)):
     if asica[i] == 1 and tesa[i] in carra1:
+        print(asica[i], squida[i])
         sqa = np.append(sqa, squida[i])
     if asica[i] == 2 and tesa[i] in carra2:
+        print(asica[i], squida[i])
         sqa = np.append(sqa, squida[i])
 print(sqa.shape, len(np.unique(sqa)))
 #plt.plot(np.linspace(1, len(col1), len(col1)), sqa, '.')
@@ -885,117 +944,228 @@ plt.xlabel('Squid Columns (ASIC1&2)')
 ```
 
 ```{python}
+# """do a stacked bar chart with each color a different squid column on asics"""
+
+# colar11 = np.array([])
+# colar12 = np.array([])
+# colar13 = np.array([])
+# colar14 = np.array([])
+# colar21 = np.array([])
+# colar22 = np.array([])
+# colar23 = np.array([])
+# colar24 = np.array([])
+
+# for i in range(len(px)):
+#     #here we check asic number and if tes is a ghost tes
+#     #and if that ghost tes is in column of the squidasic
+#     #then we add to array if ghosted as 1, else 0
+#     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 1:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar21 = np.append(colar21, 1)
+#     if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 1:
+#         #print("not in")
+#         colar21 = np.append(colar21, 0)
+#     #do column2 asic 2
+#     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 2:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar22 = np.append(colar22, 1)        
+#     if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 2:
+#         #print("not in")
+#         colar22 = np.append(colar22, 0)
+#     #do column3 asic 2
+#     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 3:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar23 = np.append(colar23, 1)        
+#     if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 3:
+#         #print("not in")
+#         colar23 = np.append(colar23, 0)
+#     #do column4 asic 2
+#     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 4:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar24 = np.append(colar24, 1)        
+#     if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 4:
+#         #print("not in")
+#         colar24 = np.append(colar24, 0)
+# #now do the same for asic1
+#     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 1:
+#         print(tesa[i], asica[i], cola[i], squida[i])
+#         colar11 = np.append(colar11, 1)
+#     if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 1:
+#         #print("not in")
+#         colar11 = np.append(colar11, 0)
+#     #do column2 asic 2
+#     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 2:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar12 = np.append(colar12, 1)        
+#     if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 2:
+#         #print("not in")
+#         colar12 = np.append(colar12, 0)
+#     #do column3 asic 2
+#     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 3:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar13 = np.append(colar13, 1)        
+#     if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 3:
+#         #print("not in")
+#         colar13 = np.append(colar13, 0)
+#     #do column4 asic 2
+#     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 4:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar14 = np.append(colar14, 1)        
+#     if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 4:
+#         #print("not in")
+#         colar14 = np.append(colar14, 0)
+        
+# """I dont think this is doing what I want appeneding does give right order
+# need to do something positional/indexing"""
+```
+
+```{python}
 """do a stacked bar chart with each color a different squid column on asics"""
 
-colar11 = np.array([])
-colar12 = np.array([])
-colar13 = np.array([])
-colar14 = np.array([])
-colar21 = np.array([])
-colar22 = np.array([])
-colar23 = np.array([])
-colar24 = np.array([])
+colar11 = np.zeros(31)
+colar12 = np.zeros(31)
+colar13 = np.zeros(31)
+colar14 = np.zeros(31)
+colar21 = np.zeros(31)
+colar22 = np.zeros(31)
+colar23 = np.zeros(31)
+colar24 = np.zeros(31)
 
 for i in range(len(px)):
     #here we check asic number and if tes is a ghost tes
     #and if that ghost tes is in column of the squidasic
     #then we add to array if ghosted as 1, else 0
     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 1:
-        #print(tesa[i], asica[i], cola[i])
-        colar21 = np.append(colar21, 1)
-    if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 1:
-        #print("not in")
-        colar21 = np.append(colar21, 0)
+        colar21[int(squida[i])] = 1
+
     #do column2 asic 2
     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 2:
-        #print(tesa[i], asica[i], cola[i])
-        colar22 = np.append(colar22, 1)        
-    if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 2:
-        #print("not in")
-        colar22 = np.append(colar22, 0)
+        colar22[int(squida[i])] = 1      
+
     #do column3 asic 2
     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 3:
-        #print(tesa[i], asica[i], cola[i])
-        colar23 = np.append(colar23, 1)        
-    if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 3:
-        #print("not in")
-        colar23 = np.append(colar23, 0)
+        colar23[int(squida[i])] = 1       
+
     #do column4 asic 2
     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 4:
-        #print(tesa[i], asica[i], cola[i])
-        colar24 = np.append(colar24, 1)        
-    if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 4:
-        #print("not in")
-        colar24 = np.append(colar24, 0)
+        colar24[int(squida[i])] = 1      
+
 #now do the same for asic1
     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 1:
-        #print(tesa[i], asica[i], cola[i])
-        colar11 = np.append(colar11, 1)
-    if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 1:
-        #print("not in")
-        colar11 = np.append(colar11, 0)
+        colar11[int(squida[i])] = 1
+
     #do column2 asic 2
     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 2:
-        #print(tesa[i], asica[i], cola[i])
-        colar12 = np.append(colar12, 1)        
-    if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 2:
-        #print("not in")
-        colar12 = np.append(colar12, 0)
+        colar12[int(squida[i])] = 1      
+
     #do column3 asic 2
     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 3:
-        #print(tesa[i], asica[i], cola[i])
-        colar13 = np.append(colar13, 1)        
-    if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 3:
-        #print("not in")
-        colar13 = np.append(colar13, 0)
+        colar13[int(squida[i])] = 1        
+
     #do column4 asic 2
     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 4:
-        #print(tesa[i], asica[i], cola[i])
-        colar14 = np.append(colar14, 1)        
-    if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 4:
-        #print("not in")
-        colar14 = np.append(colar14, 0)
+        colar14[int(squida[i])] = 1       
+      
+
 ```
 
 ```{python}
-
-print(colar21.shape, len(colar21), colar21)
-print(colar22.shape, len(colar22), colar22)
+#print(np.linspace(1, len(colar11), len(colar11)))
+print(colar21, colar21.shape)
+print(colar22, colar22.shape)
 print(colar23, colar23.shape)
 print(colar24, colar24.shape)
-print(colar14)
+print(colar11, colar11.shape)
+print(colar12, colar12.shape)
+print(colar13, colar13.shape)
+print(colar14, colar14.shape)
 ```
 
 ```{python}
 #cols = np.add(colar11, colar12, colar13, colar14, colar21, colar22, colar23)
-cols = np.add(colar11, colar12, colar13).tolist()
 r = np.linspace(1, len(colar21), len(colar21))
 #names = ["Col1ASIC1", "COL2ASIC1"]
 width=1
 plt.figure(figsize=(16,8))
-plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width)
-plt.bar(r, colar12, color=current_palette[1], edgecolor='white', width=width, bottom=colar11)
-plt.bar(r, colar13, color=current_palette[2], edgecolor='white', width=width, bottom=colar11+colar12)
-plt.bar(r, colar14, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13)
+plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1 COL1")
+plt.bar(r, colar12, color=current_palette[1], edgecolor='white', width=width, bottom=colar11, 
+        label="ASIC1 COL2")
+plt.bar(r, colar13, color=current_palette[2], edgecolor='white', width=width, bottom=colar11+colar12,
+       label="ASIC1 COL3")
+plt.bar(r, colar14, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13,
+       label="ASIC1 COL4")
 plt.bar(r, colar21, color=current_palette[4], edgecolor='white', width=width, bottom=colar11+colar12+colar13
-        +colar14)
+        +colar14, label="ASIC2 COL1")
 plt.bar(r, colar22, color=current_palette[5], edgecolor='white', width=width, bottom=colar11+colar12+colar13
-        +colar14+colar21)
+        +colar14+colar21, label="ASIC2 COL2")
 plt.bar(r, colar23, color=current_palette[6], edgecolor='white', width=width, bottom=colar11+colar12+colar13
-        +colar14+colar21+colar22)
+        +colar14+colar21+colar22, label="ASIC2 COL3")
 plt.bar(r, colar24, color=current_palette[7], edgecolor='white', width=width, bottom=colar11+colar12+colar13
-        +colar14+colar21+colar23)
+        +colar14+colar21+colar23, label="ASIC2 COL4")
+plt.legend()
 ```
 
 ```{python}
-x = np.vstack([colar11, colar12, colar13, colar14, colar21, colar22, colar23, colar24]).T
-print(x.shape)
-n_bins=len(colar21)
-labels = ["ASIC1COL1", "ASIC1COL2", "ASIC1COL3", "ASIC1COL4", "ASIC2COL1", "ASIC2COL2", "ASIC2COL3", "ASIC2COL4"]
-plt.hist(x, n_bins, histtype='bar', stacked=True, label=labels)
-plt.legend(loc="upper right")
-plt.title('Stacked-histogram ')
-plt.show()
+"""do the same coloured by ASIC"""
+r = np.linspace(1, len(colar21), len(colar21))
+#names = ["Col1ASIC1", "COL2ASIC1"]
+width=1
+plt.figure(figsize=(16,8))
+plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1")
+plt.bar(r, colar12, color=current_palette[0], edgecolor='white', width=width, bottom=colar11, 
+        label="ASIC1")
+plt.bar(r, colar13, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12,
+       label="ASIC1")
+plt.bar(r, colar14, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12+colar13,
+       label="ASIC1")
+plt.bar(r, colar21, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14, label="ASIC2")
+plt.bar(r, colar22, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21, label="ASIC2")
+plt.bar(r, colar23, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar22, label="ASIC2")
+plt.bar(r, colar24, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar23, label="ASIC2")
+plt.legend()
+```
+
+```{python}
+"""the same coloured by column"""
+r = np.linspace(1, len(colar21), len(colar21))
+#names = ["Col1ASIC1", "COL2ASIC1"]
+width=1
+plt.figure(figsize=(16,8))
+plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1 COL1")
+plt.bar(r, colar12, color=current_palette[1], edgecolor='white', width=width, bottom=colar11, 
+        label="ASIC1 COL2")
+plt.bar(r, colar13, color=current_palette[2], edgecolor='white', width=width, bottom=colar11+colar12,
+       label="ASIC1 COL3")
+plt.bar(r, colar14, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13,
+       label="ASIC1 COL4")
+plt.bar(r, colar21, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14, label="ASIC2 COL1")
+plt.bar(r, colar22, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21, label="ASIC2 COL2")
+plt.bar(r, colar23, color=current_palette[2], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar22, label="ASIC2 COL3")
+plt.bar(r, colar24, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar23, label="ASIC2 COL4")
+plt.legend()
+```
+
+```{python}
+# x = np.vstack([colar11, colar12, colar13, colar14, colar21, colar22, colar23, colar24]).T
+# print(x.shape)
+# n_bins=len(colar21)
+# labels = ["ASIC1COL1", "ASIC1COL2", "ASIC1COL3", "ASIC1COL4", "ASIC2COL1", "ASIC2COL2", "ASIC2COL3", "ASIC2COL4"]
+# plt.hist(x, n_bins, histtype='bar', stacked=True, label=labels)
+# plt.legend(loc="upper right")
+# plt.title('Stacked-histogram ')
+# plt.show()
+```
+
+```{python}
+
 ```
 
 ```{python}
@@ -1004,26 +1174,26 @@ plt.show()
 ```
 
 ```{python}
-"""do the same but use click inputs and 2 fits"""
-# azval = 2.1
-# elval = 52
-initial_guess1 = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
-initial_guess2 = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
+# """do the same but use click inputs and 2 fits"""
+# # azval = 2.1
+# # elval = 52
+# initial_guess1 = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
+# initial_guess2 = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
 
-fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
-data_fitted = twoD_Gaussian((AZ, EL), *fit_params)
-fit_errors = np.sqrt(np.diag(cov_mat))
+# fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
+# data_fitted = twoD_Gaussian((AZ, EL), *fit_params)
+# fit_errors = np.sqrt(np.diag(cov_mat))
 
-print('Fit Amplitude:', fit_params[0], '\u00b1', fit_errors[0])
-print('Fit X-Center: ', fit_params[1], '\u00b1', fit_errors[1])
-print('Fit Y-Center: ', fit_params[2], '\u00b1', fit_errors[2])
-print('Fit X-Sigma:  ', fit_params[3], '\u00b1', fit_errors[3])
-print('Fit Y-Sigma:  ', fit_params[4], '\u00b1', fit_errors[4])
+# print('Fit Amplitude:', fit_params[0], '\u00b1', fit_errors[0])
+# print('Fit X-Center: ', fit_params[1], '\u00b1', fit_errors[1])
+# print('Fit Y-Center: ', fit_params[2], '\u00b1', fit_errors[2])
+# print('Fit X-Sigma:  ', fit_params[3], '\u00b1', fit_errors[3])
+# print('Fit Y-Sigma:  ', fit_params[4], '\u00b1', fit_errors[4])
 
-plt.figure(figsize=(10,10))
-plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
-        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+# plt.figure(figsize=(10,10))
+# plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+#         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+# plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
 ```
 
 ```{python}
