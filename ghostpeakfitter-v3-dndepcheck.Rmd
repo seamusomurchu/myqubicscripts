@@ -1165,7 +1165,9 @@ plt.legend()
 ```
 
 ```{python}
-
+"""Still need to test tes beside each other on squid. of the ghost on sqd24 is the same image as on sqd23 or sqd25
+This is really important, seems most likely and this is actually what i intended to do originally but got side tracked along the way
+albiet, necessarily so"""
 ```
 
 ```{python}
