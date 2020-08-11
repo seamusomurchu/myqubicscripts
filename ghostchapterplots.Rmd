@@ -37,7 +37,7 @@ azmax = 20./c50
 TESNum = 76
 
 flatmap20, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
-npix = len(np.ravel(flatmap))
+npix = len(np.ravel(flatmap20))
 
 #print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
 
@@ -45,9 +45,13 @@ AZ, EL = np.meshgrid(az, el)
 
 
 plt.figure(figsize=(12,16))
-plt.subplot(1,3,1)
 plt.imshow(flatmap20, aspect='equal', origin='lower',
           extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+plt.xticks(fontsize=18)
+plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+plt.yticks(fontsize=18)
+plt.savefig("/home/james/ghostimages/thesisplots/2020tes76", bbox_inches='tight')
 ```
 
 ```{python}
@@ -61,7 +65,7 @@ azmax = 25./c50
 TESNum = 76
 
 flatmap19, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
-npix = len(np.ravel(flatmap))
+npix = len(np.ravel(flatmap19))
 
 #print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
 
@@ -123,6 +127,21 @@ plt.axis('off')
 
 ```{python}
 """proably best to do 3 separate plots in latex"""
+```
+
+```{python}
+plt.figure(figsize=(12,16))
+
+plt.scatter(psfdata[4,0,:], psfdata[4,1,:]+50, c=psfdata[4,2,:])
+plt.xlim([np.min(psfdata[4,0,:]), np.max(psfdata[4,0,:])])
+plt.ylim([np.min(psfdata[4,1,:]+50), np.max(psfdata[4,1,:]+50)])
+
+plt.axes().set_aspect('equal')
+plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+plt.xticks(fontsize=18)
+plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+plt.yticks(fontsize=18)
+plt.savefig("/home/james/ghostimages/thesisplots/simtes76", bbox_inches='tight')
 ```
 
 ```{python}
