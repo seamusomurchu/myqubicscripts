@@ -1171,6 +1171,91 @@ albiet, necessarily so"""
 ```
 
 ```{python}
+print(sqa.shape)
+```
+
+```{python}
+"""use tes with ghosts and find tes near each other on the PAD"""
+newcola1 = np.array([])
+
+for i in range(len(px)):
+    if asica[i] ==1 and tesa[i] in carra1:
+        print("Ghost Info")
+        print(tesa[i], squida[i], cola[i])
+        print("Ghost +- 1", tesa)
+print(carra1)
+
+```
+
+```{python}
+dirfile = '/home/james/synthbeamdata/2020-01-14'
+
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+
+
+TESNum = 27
+
+flatmap27, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap27))
+
+#print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+
+
+plt.figure(figsize=(12,16))
+plt.imshow(flatmap27, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+plt.xticks(fontsize=18)
+plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+plt.yticks(fontsize=18)
+#plt.savefig("/home/james/ghostimages/thesisplots/2020tes76", bbox_inches='tight')
+```
+
+```{python}
+TESNum = 124
+
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+
+#print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+
+
+plt.figure(figsize=(12,16))
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+plt.xticks(fontsize=18)
+plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+plt.yticks(fontsize=18)
+```
+
+```{python}
+TESNum = 26
+
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+
+#print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+
+
+plt.figure(figsize=(12,16))
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+plt.xticks(fontsize=18)
+plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+plt.yticks(fontsize=18)
+```
+
+```{python}
 """HERE BE DRAGONS... all just test code below"""
 2000
 ```
