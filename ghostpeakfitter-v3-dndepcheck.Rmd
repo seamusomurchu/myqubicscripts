@@ -1216,7 +1216,7 @@ plt.yticks(fontsize=18)
 ```
 
 ```{python}
-TESNum = 124
+TESNum = 28
 
 flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
 npix = len(np.ravel(flatmap))
@@ -1256,31 +1256,114 @@ plt.yticks(fontsize=18)
 ```
 
 ```{python}
-"""HERE BE DRAGONS... all just test code below"""
-2000
+with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
+    datmat = pickle.load(f)
 ```
 
 ```{python}
-# """do the same but use click inputs and 2 fits"""
-# # azval = 2.1
-# # elval = 52
-# initial_guess1 = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
-# initial_guess2 = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
+header = ["TESnum", "xp1", "yp1", "xp2", "yp2", "amp1", "amp2", "ampr", "angle"]
+print(datmat.shape)
+print(header)
+print(datmat[0])
 
-# fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
-# data_fitted = twoD_Gaussian((AZ, EL), *fit_params)
-# fit_errors = np.sqrt(np.diag(cov_mat))
+```
 
-# print('Fit Amplitude:', fit_params[0], '\u00b1', fit_errors[0])
-# print('Fit X-Center: ', fit_params[1], '\u00b1', fit_errors[1])
-# print('Fit Y-Center: ', fit_params[2], '\u00b1', fit_errors[2])
-# print('Fit X-Sigma:  ', fit_params[3], '\u00b1', fit_errors[3])
-# print('Fit Y-Sigma:  ', fit_params[4], '\u00b1', fit_errors[4])
+```{python}
+print(tesa)
+print(asica)
+print(complist)
+```
 
-# plt.figure(figsize=(10,10))
-# plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
-#         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-# plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+```{python}
+"""do the 4x1 plot as in notes"""
+dirfile = '/home/james/synthbeamdata/2020-01-14'
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+#ghost, -1, +1
+maps = [26, 27, 28]
+flatmapg, az, el = sbfit.get_flatmap(maps[1], dirfile, azmin = azmin, azmax=azmax)
+flatmapm, az, el = sbfit.get_flatmap(maps[0], dirfile, azmin = azmin, azmax=azmax)
+flatmapp, az, el = sbfit.get_flatmap(maps[2], dirfile, azmin = azmin, azmax=azmax)
+AZ, EL = np.meshgrid(az, el)
+
+
+# %matplotlib qt
+plt.figure(figsize=(16,8))
+plt.subplot(1,4,1)
+plt.imshow(flatmapm, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.title("TES{} SQD-1".format(int(maps[0])))
+plt.subplot(1,4,2)
+plt.imshow(flatmapg, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.title("TES{} Ghost".format(int(maps[1])))
+plt.subplot(1,4,3)
+plt.imshow(flatmapp, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.title("TES{} SQD+1".format(int(maps[2])))
+
+
+# plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+# plt.xticks(fontsize=18)
+# plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+# plt.yticks(fontsize=18)
+
+#now attempt fitting 2 peaks to each image
+xys = plt.ginput(6)
+#plt.close()
+
+initial_guess1 = (max(flatmapg.ravel()), xys[0][0], xys[0][1], 1, 1, 0, 0)
+# initial_guessg2 = (max(flatmapg.ravel()), xys[1][0], xys[1][1], 1, 1, 0, 0)
+# initial_guessm1 = (max(flatmapm.ravel()), xys[2][0], xys[2][1], 1, 1, 0, 0)
+# initial_guessm2 = (max(flatmapm.ravel()), xys[3][0], xys[3][1], 1, 1, 0, 0)
+# initial_guessp1 = (max(flatmapp.ravel()), xys[4][0], xys[4][1], 1, 1, 0, 0)
+# initial_guessp2 = (max(flatmapp.ravel()), xys[5][0], xys[5][1], 1, 1, 0, 0)
+
+fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmapg.ravel(), p0=initial_guess1)
+data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
+```
+
+```{python}
+"""sideline this method i only needed qt from before"""
+# # %matplotlib qt
+# peaks1 = np.array([])
+# peaks2 = np.array([])
+
+# for i, tes in enumerate(maps):
+#     flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+#     AZ, EL = np.meshgrid(az, el)
+    
+#     plt.figure(figsize=(16,8))
+#     plt.imshow(flatmap, aspect='equal', origin='lower',
+#           extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+#     plt.title("TES {}".format(tes))
+#     plt.xlabel("Azimuth [$^\circ$]")
+#     plt.ylabel("Elevation [$^\circ$]")
+    
+#     peak1, peak2 = plt.ginput(2)
+#     peaks1 = np.append(peaks1, peak1)
+#     peaks2 = np.append(peaks2, peak2)
+    
+# print(peaks1, peaks2)
+```
+
+```{python}
+print(xys, xys[0], xys[0][0])
+```
+
+```{python}
+print((AZp == AZg).all())
+```
+
+```{python}
+"""HERE BE DRAGONS... all just test code below"""
+
+```
+
+```{python}
+
 ```
 
 ```{python}
@@ -1343,71 +1426,15 @@ plt.yticks(fontsize=18)
 ```
 
 ```{python}
-# """plot a testmap"""
-# flatmap = flatmaps[2,:,:]
-# testmap = flatmap.ravel()
-# testmapfltn = flatmap.flatten()
 
-# plt.figure()
-# plt.plot(AZ.ravel(),testmap, 'b.')
-# plt.figure()
-# plt.plot(EL.ravel(),testmap, 'b.')
-# plt.figure()
-# plt.scatter(AZ.ravel(), EL.ravel(), c=testmap)
-# plt.figure()
-# plt.imshow(flatmaps[2,:,:], aspect='equal', 
-#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
-# plt.xticks(np.arange(-12, 12, step=1))
-# plt.yticks(np.arange(45, 65, step=1))
-# plt.grid(True)
 ```
 
 ```{python}
-# print(az.shape, AZ.ravel().shape)
-# print(EL.ravel())
-# print(EL.flatten())
-# print(testmap)
-# print(testmapfltn)
-# plt.subplot(121)
-# plt.imshow(testmap.reshape(101,101), aspect='equal', 
-#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
-# # plt.subplot(122)
-# # plt.imshow(testmap.reshape(101,101), aspect='equal', 
-# #         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+
 ```
 
 ```{python}
-# """lets try a more efficient way"""
-# azval = -8
-# elval = 49
-# #print(AZ.shape, testmap.shape, np.mean(testmap))
-# taz = AZ.ravel()
-# tel = EL.ravel()
-# testmap = flatmap.ravel()
-# testmap[testmap < 10000] = 0
 
-# for i, azz in enumerate(taz):
-#     if abs(azz - azval) > 3:      
-#         testmap[i] = 0
-#         #testaz = np.append(testaz, azz)
-        
-# for i, ell in enumerate(tel): 
-#     if abs(ell - elval) > 3:      
-#         testmap[i] = 0
-        
-
-# mapmesh = testmap.reshape(101,101)
-# #print(testmap.shape, type(testmap), type(mapmesh), mapmesh.shape, max(testmap))
-
-# initial_guess = (max(testmap), azval, elval, 0.5, 0.5, 0, 0)
-# popt, pcov = opt.curve_fit(twoD_Gaussian, (AZ, EL), mapmesh.ravel(), p0=initial_guess)
-# data_fitted = twoD_Gaussian((AZ, EL), *popt)
-
-# plt.figure(figsize=(10,10))
-# plt.imshow(mapmesh, aspect='equal',
-#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
-
-# plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
 ```
 
 ```{python}
