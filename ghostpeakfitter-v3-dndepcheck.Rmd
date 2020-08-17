@@ -1313,16 +1313,19 @@ plt.title("TES{} SQD+1".format(int(maps[2])))
 xys = plt.ginput(6)
 #plt.close()
 
-initial_guess1 = (max(flatmapg.ravel()), xys[0][0], xys[0][1], 1, 1, 0, 0)
-# initial_guessg2 = (max(flatmapg.ravel()), xys[1][0], xys[1][1], 1, 1, 0, 0)
+initial_guess1 = (max(flatmapm.ravel()), xys[0][0], xys[0][1], 1, 1, 0, 0)
+initial_guessg2 = (max(flatmapm.ravel()), xys[1][0], xys[1][1], 1, 1, 0, 0)
 # initial_guessm1 = (max(flatmapm.ravel()), xys[2][0], xys[2][1], 1, 1, 0, 0)
 # initial_guessm2 = (max(flatmapm.ravel()), xys[3][0], xys[3][1], 1, 1, 0, 0)
 # initial_guessp1 = (max(flatmapp.ravel()), xys[4][0], xys[4][1], 1, 1, 0, 0)
 # initial_guessp2 = (max(flatmapp.ravel()), xys[5][0], xys[5][1], 1, 1, 0, 0)
 
-fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmapg.ravel(), p0=initial_guess1)
+fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmapm.ravel(), p0=initial_guess1)
 data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+plt.subplot(1,4,1)
 plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
+plt.xlim([np.min(AZ)*c50, np.max(AZ)*c50])
+plt.ylim([np.min(EL), np.max(EL)])
 ```
 
 ```{python}
