@@ -1,0 +1,104 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import qubic.sb_fitting as sbfit
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+import qubic.fibtools as ft
+import scipy.optimize as opt
+```
+
+```{python}
+dirfile = '/home/james/synthbeamdata/2020-07-30'
+
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+
+
+TESNum = 200
+
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+
+#print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+
+
+plt.figure(figsize=(12,16))
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=1, common_fwhm=True, no_xy_shift=False, distortion=False)
+
+fit, xypeaks = sbfit.fit_sb(flatmap, az, el, sbfitmodel3, verbose=False, resample=False, 
+                    doplot=False, extra_title='TES #{}'.format(TESNum))
+
+
+```
+
+```{python}
+plt.figure(figsize=(12,16))
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.plot(xypeaks[0, :], xypeaks[1, :], 'r.')
+```
+
+```{python}
+print(xypeaks.shape)
+```
+
+```{python}
+"""load 150 flatmaps"""
+dirfile = '/home/james/synthbeamdata/2020-07-30'
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+flatmap150 = np.zeros([256, 101, 101])
+teslist = np.linspace(1,256, 256)
+for i, tes in enumerate(teslist):
+
+    flatmap, az, el = sbfit.get_flatmap(int(tes), dirfile, azmin = azmin, azmax=azmax)
+    print(tes, i, flatmap.shape, flatmap[0].shape)
+    flatmap150[i, :, :] = flatmap
+```
+
+```{python}
+"""do fits and find peaks to 150 data"""
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=1, common_fwhm=True, no_xy_shift=False, distortion=False)
+peaks = np.zeros([256,4,9])
+for i, tes in enumerate(teslist):
+
+    fit, xypeaks = sbfit.fit_sb(flatmap150[i,:,:], az, el, sbfitmodel3, verbose=False, resample=False, 
+                        doplot=False, extra_title='TES #{}'.format(TESNum))
+    peaks[i,:,:] = xypeaks
+```
+
+```{python}
+for i, tes in enumerate(teslist):
+
+    plt.figure(figsize=(16,6))
+    plt.subplot(1,2,1)
+    plt.imshow(flatmap150[i,:,:], aspect='equal',
+        extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+    plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.axis('equal')
+```
+
+```{python}
+
+```
