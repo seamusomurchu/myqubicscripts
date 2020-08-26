@@ -43,7 +43,7 @@ plt.figure(figsize=(12,16))
 plt.imshow(flatmap, aspect='equal', origin='lower',
           extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
 
-sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=1, common_fwhm=True, no_xy_shift=False, distortion=False)
+sbfitmodel3 = sbfit.SbModelIndepPeaks(nrings=2, common_fwhm=True, no_xy_shift=False, distortion=True)
 
 fit, xypeaks = sbfit.fit_sb(flatmap, az, el, sbfitmodel3, verbose=False, resample=False, 
                     doplot=False, extra_title='TES #{}'.format(TESNum))

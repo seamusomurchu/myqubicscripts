@@ -1,0 +1,170 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import qubic.sb_fitting as sbfit
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+import qubic.fibtools as ft
+import scipy.optimize as opt
+from scipy.signal import chirp, find_peaks, peak_widths
+import scipy.misc
+```
+
+```{python}
+"""load psfs"""
+"""load and plot simulation data"""
+psflist = np.array([6, 37, 50, 58, 76, 93])
+
+psfdata = np.zeros([6, 3, 251001])
+for i, tes in enumerate(psflist):
+    data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
+    psfdata[i,:,:] = data.T
+
+plt.figure(figsize=(10,10))
+for i , tes in enumerate(psflist):
+    plt.subplot(2,3,i+1)
+    plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+    plt.axis('equal')
+    #plt.plot(peaks[i, 0, :], peaks[i, 1, :], 'r.')
+    plt.title('Sim data TES {}'.format(tes))
+```
+
+```{python}
+"""make a meshgrid from the psf data to make fits"""
+
+def makemeshgrid(psfdata, meshsize):
+    x = np.linspace(min(psfdata[0,:]), max(psfdata[0,:]), meshsize)
+    y = np.linspace(min(psfdata[1,:]), max(psfdata[1,:]), meshsize)
+
+    X,Y = np.meshgrid(x, y)
+
+    # Interpolate (x,y,z) points [mat] over a normal (x,y) grid [X,Y]
+    #   Depending on your "error", you may be able to use other methods
+    Z = griddata((psfdata[0,:], psfdata[1,:]), psfdata[2,:], (X,Y), method='nearest')
+
+    #plt.pcolormesh(X,Y,Z)
+    #plt.show()
+    return Z
+
+meshsize = 101
+psfmesh = np.zeros([6, meshsize, meshsize])
+for i, tes in enumerate(psflist):
+    psfmesh[i,:,:] = makemeshgrid(psfdata[i], meshsize)
+
+
+
+x = np.linspace(min(psfdata[0,0,:]), max(psfdata[0,0,:]), meshsize)
+y = np.linspace(min(psfdata[0,1,:]), max(psfdata[0,1,:]), meshsize)
+
+
+```
+
+```{python}
+x = np.linspace(min(psfdata[0,0,:]), max(psfdata[0,0,:]), meshsize)
+y = np.linspace(min(psfdata[0,1,:]), max(psfdata[0,1,:]), meshsize)
+
+print(psfdata.shape, psfmesh.shape, x.shape, min(x), max(x), min(y), max(y))
+```
+
+```{python}
+plt.figure(figsize=(16,11))
+for i, tes in enumerate(psflist):
+
+    plt.subplot(2,3,i+1)
+    
+    plt.imshow(psfmesh[i,:,:], aspect='equal',
+        extent=[np.min(x), np.max(x), np.min(y), np.max(y)])
+    plt.axis('equal')
+    plt.title('Sim data TES {}'.format(tes))
+```
+
+```{python}
+# Make a line with "num" points...
+x0, y0 = 15, 21 # These are in _pixel_ coordinates!!
+x1, y1 = 85, 91
+# x0, y0 = 40, 98 # These are in _pixel_ coordinates!!
+# x1, y1 = 65, 98
+num = 101
+x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
+# Extract the values along the line
+zi = psfmesh[i,:,:][x.astype(np.int), y.astype(np.int)]
+zi = scipy.ndimage.map_coordinates(np.transpose(psfmesh[i,:,:]), np.vstack((x,y)))
+
+plt.figure(figsize=(16,8))
+plt.subplot(1,2,1)
+plt.imshow(psfmesh[5,:,:], aspect='equal')
+plt.plot([x0, x1], [y0, y1], 'ro-')
+
+# #set up axis for second plot
+# azi = np.linspace(min(psfmesh[5,:,0]), max(psfmesh[5,:,0]), len(zi))
+# newazi = np.array([])
+# for i, z in enumerate(azi):
+#     #print(i, z)
+#     if (i>x0) and (i<x1):
+        
+#         newazi = np.append(newazi, z)
+        
+#newazi = np.linspace(min(newazi), max(newazi), len(zi))
+
+plt.subplot(1,2,2)
+plt.plot(azi, zi)
+#plt.plot(zi)
+#print(newazi)
+#xticks(newazi)
+
+
+
+peaks, _ = find_peaks(zi, prominence=0.2)
+results_half = peak_widths(zi, peaks, rel_height=0.5)
+#plt.plot(peaks, zi[peaks], "x")
+#plt.hlines(*results_half[1:], color="C2")
+#print(zi.shape, peaks.shape, results_half)
+#print(peaks, zi, zi.shape, azi.shape)
+print(*results_half[1:])
+print(results_half)
+#print(azi[peaks])
+plt.plot(azi[peaks], zi[peaks], "x")
+plt.plot(azi[peaks], results_half[1], '_', mew=3, markersize=12)
+#plt.hlines(results_half[1], results_half[2], results_half[3], color="C2")
+```
+
+```{python}
+"""IF 0.396 deg/pt"""
+#print fwhm from points
+print(results_half[0])
+#print fhhm * 0.4deg/pt
+print("FWHM in deg ", results_half[0] * 0.396 ) #= fwhm in deg
+```
+
+```{python}
+azi = np.linspace(min(psfdata[5,0,:]), max(psfdata[5,0,:]), len(zi))
+print(len(zi), "length zi cut")
+print(max(azi) - min(azi), "degrees")
+print( num, "points")
+print((max(azi) - min(azi))/num, "degrees/point in whole image")
+print(((max(azi) - min(azi))/num) * len(zi), "degrees for cut length")
+
+print("FWHM in deg ", results_half[0] * ((max(azi) - min(azi))/num) ) #= fwhm in deg
+```
+
+```{python}
+print(azi.shape, x.shape)
+print(x)
+```
+
+```{python}
+
+```
