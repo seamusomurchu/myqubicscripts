@@ -109,7 +109,7 @@ plt.imshow(psfmesh[5,:,:], aspect='equal')
 plt.plot([x0, x1], [y0, y1], 'ro-')
 
 # #set up axis for second plot
-# azi = np.linspace(min(psfmesh[5,:,0]), max(psfmesh[5,:,0]), len(zi))
+azi = np.linspace(min(psfmesh[4,:,0]), max(psfmesh[4,:,0]), len(zi))
 # newazi = np.array([])
 # for i, z in enumerate(azi):
 #     #print(i, z)
@@ -163,6 +163,121 @@ print("FWHM in deg ", results_half[0] * ((max(azi) - min(azi))/num) ) #= fwhm in
 ```{python}
 print(azi.shape, x.shape)
 print(x)
+```
+
+```{python}
+"""Reapeat at double resolution"""
+meshsize = 201
+psfmesh = np.zeros([6, meshsize, meshsize])
+for i, tes in enumerate(psflist):
+    psfmesh[i,:,:] = makemeshgrid(psfdata[i], meshsize)
+
+
+
+x = np.linspace(min(psfdata[0,0,:]), max(psfdata[0,0,:]), meshsize)
+y = np.linspace(min(psfdata[0,1,:]), max(psfdata[0,1,:]), meshsize)
+
+```
+
+```{python}
+plt.figure(figsize=(16,11))
+for i, tes in enumerate(psflist):
+
+    plt.subplot(2,3,i+1)
+    
+    plt.imshow(psfmesh[i,:,:], aspect='equal',
+        extent=[np.min(x), np.max(x), np.min(y), np.max(y)])
+    plt.axis('equal')
+    plt.title('Sim data TES {}'.format(tes))
+```
+
+```{python}
+# Make a line with "num" points...
+x0, y0 = 30, 42 # These are in _pixel_ coordinates!!
+x1, y1 = 150, 162
+
+num = 101
+x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
+# Extract the values along the line
+zi = psfmesh[i,:,:][x.astype(np.int), y.astype(np.int)]
+zi = scipy.ndimage.map_coordinates(np.transpose(psfmesh[i,:,:]), np.vstack((x,y)))
+
+plt.figure(figsize=(16,8))
+plt.subplot(1,2,1)
+plt.imshow(psfmesh[5,:,:], aspect='equal')
+plt.plot([x0, x1], [y0, y1], 'ro-')
+
+plt.subplot(1,2,2)
+plt.plot(azi, zi)
+
+peaks, _ = find_peaks(zi, prominence=0.2)
+results_half = peak_widths(zi, peaks, rel_height=0.5)
+
+print(*results_half[1:])
+print(results_half)
+#print(azi[peaks])
+plt.plot(azi[peaks], zi[peaks], "x")
+plt.plot(azi[peaks], results_half[1], '_', mew=3, markersize=12)
+#plt.hlines(results_half[1], results_half[2], results_half[3], color="C2")
+```
+
+```{python}
+azi = np.linspace(min(psfdata[5,0,:]), max(psfdata[5,0,:]), len(zi))
+print(len(zi), "length zi cut")
+print(max(azi) - min(azi), "degrees")
+print( num, "points")
+print((max(azi) - min(azi))/num, "degrees/point in whole image")
+print(((max(azi) - min(azi))/num) * len(zi), "degrees for cut length")
+
+print("FWHM in deg ", results_half[0] * ((max(azi) - min(azi))/num) ) #= fwhm in deg
+```
+
+```{python}
+n=8
+print(np.degrees(2e-3 / ((n -1) * 14e-3)))
+```
+
+```{python}
+"""Calc FWHM for TES 76"""
+x0, y0 = 6, 200 # These are in _pixel_ coordinates!!
+x1, y1 = 200, 7
+
+num = 101
+x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
+# Extract the values along the line
+zi = psfmesh[4,:,:][x.astype(np.int), y.astype(np.int)]
+zi = scipy.ndimage.map_coordinates(np.transpose(psfmesh[4,:,:]), np.vstack((x,y)))
+
+plt.figure(figsize=(16,8))
+plt.subplot(1,2,1)
+plt.imshow(psfmesh[4,:,:], aspect='equal')
+plt.plot([x0, x1], [y0, y1], 'ro-')
+
+plt.subplot(1,2,2)
+plt.plot(azi, zi)
+
+peaks, _ = find_peaks(zi, prominence=0.2)
+results_half = peak_widths(zi, peaks, rel_height=0.5)
+
+print(*results_half[1:])
+print(results_half)
+#print(azi[peaks])
+plt.plot(azi[peaks], zi[peaks], "x")
+plt.plot(azi[peaks], results_half[1], '_', mew=3, markersize=12)
+```
+
+```{python}
+print(len(zi), "length zi cut")
+print(max(azi) - min(azi), "degrees")
+print( num, "points")
+print((max(azi) - min(azi))/num, "degrees/point in whole image")
+print(((max(azi) - min(azi))/num) * len(zi), "degrees for cut length")
+
+print("FWHM in deg ", results_half[0] * ((max(azi) - min(azi))/num) ) #= fwhm in deg
+```
+
+```{python}
+
 ```
 
 ```{python}
