@@ -178,5 +178,43 @@ plt.ylim(max(20*np.log10(np.abs(oldtabnear[0,:])/4*np.pi))-70,max(20*np.log10(np
 ```
 
 ```{python}
+"""here I will plot the near field spherical export types"""
+#load the export dB power file
+neartabpow = np.loadtxt('/home/james/graspfiles/horncuts/nearfieldoldtabexportcut.dat', skiprows=6, max_rows=241, delimiter=',').T
+neargauspow = np.loadtxt('/home/james/graspfiles/horncuts/nearfieldgausexportcut.dat', skiprows=6, max_rows=241, delimiter=',').T
+
+#logcut = np.abs(oldtabnear[0,:]) + np.abs(oldtabnear[1,:])
+logcut = np.sqrt(oldtabnear[0,:]**2 + oldtabnear[1,:]**2)
+logcut = 20*np.log10(logcut)
+
+diff = max(cuta[1,:]) - max(neartabpow[1,:])
+
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+plt.plot(neartabpow[0,:], neartabpow[1,:], linewidth=3, label='Exported dBi Nearfield Tabulated Source')
+plt.plot(degrange, logcut, '--', 
+         label=r'$20 log_{10}(\sqrt{E_{\theta Re}^2 + E_{\theta Im}^2})$, $\phi = 0^\circ$ Nearfield Tabulated Source ', linewidth=3)
+
+plt.plot(cuta[0,:], cuta[1,:]-diff, label=r'$\phi = 0^\circ$ Technical Reference (Normalised)', linewidth=3)
+
+plt.plot(degrange, 20*np.log10(np.abs(oldtabnear[0,:])), label=r'$E_{\theta Re}$, $\phi = 0^\circ$ Nearfield Tabulated Source', linewidth=1)
+plt.plot(degrange, 20*np.log10(np.abs(oldtabnear[1,:])), label=r'E_{\theta Im}$, $\phi = 0^\circ$ Nearfield Tabulated Source', linewidth=1)
+
+#plt.plot(degrange, 20*np.log10((np.abs(neargaus[0,:])+np.abs(neargaus[1,:]))/4*np.pi), label=r'Nearfield Guass', linewidth=3)
+#plt.plot(neargauspow[0,:], neargauspow[1,:], linewidth=3, label='Exported Power Nearfield Gaus Source')
+
+plt.legend(loc='upper right', fontsize=20)
+plt.xlim(0,90)
+plt.grid(True)
+plt.yticks(np.arange(-100, -30, step=4))
+plt.ylim(-100,-30)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Angle $\theta$ ($^\circ$)')
+plt.title('150 GHz Beam Comparisons')
+#plt.savefig("/home/james/graspfiles/horncuts/NearFieldComps.png", bbox_inches='tight')
+```
+
+```{python}
 
 ```
