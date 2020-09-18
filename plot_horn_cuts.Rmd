@@ -199,7 +199,7 @@ plt.plot(degrange, logcut, '--',
 plt.plot(cuta[0,:], cuta[1,:]-diff, label=r'$\phi = 0^\circ$ Technical Reference (Normalised)', linewidth=3)
 
 plt.plot(degrange, 20*np.log10(np.abs(oldtabnear[0,:])), label=r'$E_{\theta Re}$, $\phi = 0^\circ$ Nearfield Tabulated Source', linewidth=1)
-plt.plot(degrange, 20*np.log10(np.abs(oldtabnear[1,:])), label=r'E_{\theta Im}$, $\phi = 0^\circ$ Nearfield Tabulated Source', linewidth=1)
+plt.plot(degrange, 20*np.log10(np.abs(oldtabnear[1,:])), label=r'$E_{\theta Im}$, $\phi = 0^\circ$ Nearfield Tabulated Source', linewidth=1)
 
 #plt.plot(degrange, 20*np.log10((np.abs(neargaus[0,:])+np.abs(neargaus[1,:]))/4*np.pi), label=r'Nearfield Guass', linewidth=3)
 #plt.plot(neargauspow[0,:], neargauspow[1,:], linewidth=3, label='Exported Power Nearfield Gaus Source')
