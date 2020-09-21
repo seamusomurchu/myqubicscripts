@@ -58,7 +58,7 @@ plt.colorbar()
 plt.rc('font', **font)
 plt.figure(figsize=(12,6))
 plt.subplot(1,2,1)
-plt.scatter(davetabfield[2,:], davetabfield[3,:], c=oldtabfield[0,:]*-1)
+plt.scatter(davetabfield[2,:], davetabfield[3,:], c=oldtabfield[0,:])
 plt.title('Old File col1')
 plt.colorbar()
 
