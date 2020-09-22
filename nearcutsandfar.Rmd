@@ -1,0 +1,106 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import numpy as np
+import glob
+import matplotlib.pyplot as plt
+```
+
+```{python}
+cutdir = '/home/james/graspfiles/nearfieldtesting/'
+#print(glob.glob(cutdir+"*.cut"))
+cuts = glob.glob(cutdir+"*.cut")
+print(cuts)
+```
+
+```{python}
+cut8 = np.loadtxt(cuts[0], skiprows=3, delimiter=',').T
+cut300 = np.loadtxt(cuts[1], skiprows=3, delimiter=',').T
+cut146 = np.loadtxt(cuts[2], skiprows=3, delimiter=',').T
+cut20 = np.loadtxt(cuts[3], skiprows=3, delimiter=',').T
+cut80 = np.loadtxt(cuts[4], skiprows=3, delimiter=',').T
+cut200 = np.loadtxt(cuts[5], skiprows=3, delimiter=',').T
+cut800 = np.loadtxt(cuts[6], skiprows=3, delimiter=',').T
+cut500 = np.loadtxt(cuts[7], skiprows=3, delimiter=',').T
+cut140 = np.loadtxt(cuts[8], skiprows=3, delimiter=',').T
+farcut = np.loadtxt('/home/james/graspfiles/nearfieldtesting/farfieldcut.txt', skiprows=251, delimiter=',').T
+
+cuta = np.array([cut8, cut146, cut20, cut80, cut140, cut200, cut300, cut500, cut800, farcut])
+
+print(cuta.shape)
+```
+
+```{python}
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+plt.figure(figsize=(10,8))
+
+
+plt.plot(cuta[0,0,:], cuta[0,1,:], label=r'8 mm'.format(i), linewidth=3)
+plt.plot(cuta[1,0,:], cuta[1,1,:], label=r'14.6 mm'.format(i), linewidth=3)
+plt.plot(cuta[2,0,:], cuta[2,1,:], label=r'20 mm'.format(i), linewidth=3)
+plt.plot(cuta[3,0,:], cuta[3,1,:], label=r'80 mm'.format(i), linewidth=3)
+plt.plot(cuta[4,0,:], cuta[4,1,:], label=r'140 mm'.format(i), linewidth=3)
+plt.plot(cuta[5,0,:], cuta[5,1,:], label=r'200 mm'.format(i), linewidth=3)
+plt.plot(cuta[6,0,:], cuta[6,1,:], label=r'300 mm'.format(i), linewidth=3)
+plt.plot(cuta[7,0,:], cuta[7,1,:], label=r'500 mm'.format(i), linewidth=3)
+plt.plot(cuta[8,0,:], cuta[8,1,:], label=r'800 mm'.format(i), linewidth=3)
+plt.plot(cuta[9,0,:], cuta[9,1,:], label=r'Far Field'.format(i), linewidth=3)
+
+plt.legend(loc='upper right')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Angle $\theta$ ($^\circ$)')
+plt.title('Near Field Convergence')
+plt.xlim(0,90)
+#plt.savefig("/home/james/graspfiles/nearfieldtesting/NearFieldConvergence.png", bbox_inches='tight')
+```
+
+```{python}
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+
+plt.plot(cuta[0,0,:], cuta[0,1,:]-max(cuta[0,1,:]), label=r'8 mm'.format(i), linewidth=3)
+plt.plot(cuta[1,0,:], cuta[1,1,:]-max(cuta[1,1,:]), label=r'14.6 mm'.format(i), linewidth=3)
+plt.plot(cuta[2,0,:], cuta[2,1,:]-max(cuta[2,1,:]), label=r'20 mm'.format(i), linewidth=3)
+plt.plot(cuta[3,0,:], cuta[3,1,:]-max(cuta[3,1,:]), label=r'80 mm'.format(i), linewidth=3)
+plt.plot(cuta[4,0,:], cuta[4,1,:]-max(cuta[4,1,:]), label=r'140 mm'.format(i), linewidth=3)
+plt.plot(cuta[5,0,:], cuta[5,1,:]-max(cuta[5,1,:]), label=r'200 mm'.format(i), linewidth=3)
+plt.plot(cuta[6,0,:], cuta[6,1,:]-max(cuta[6,1,:]), label=r'300 mm'.format(i), linewidth=3)
+plt.plot(cuta[7,0,:], cuta[7,1,:]-max(cuta[7,1,:]), label=r'500 mm'.format(i), linewidth=3)
+plt.plot(cuta[8,0,:], cuta[8,1,:]-max(cuta[8,1,:]), label=r'800 mm'.format(i), linewidth=3)
+plt.plot(cuta[9,0,:], cuta[9,1,:]-max(cuta[9,1,:]), label=r'Far Field'.format(i), linewidth=3)
+
+plt.legend(loc='upper right')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Angle $\theta$ ($^\circ$)')
+plt.title('Near Field Convergence Normalised')
+plt.xlim(0,90)
+plt.ylim(-50,1)
+#plt.savefig("/home/james/graspfiles/nearfieldtesting/NearFieldConvergenceNorm.png", bbox_inches='tight')
+```
+
+```{python}
+
+```
