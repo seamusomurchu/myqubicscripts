@@ -76,8 +76,8 @@ plt.grid(True)
 ```
 
 ```{python}
-azval = 2.1
-elval = 52
+azval = -3.9
+elval = 53
 initial_guess = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
 
 fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)

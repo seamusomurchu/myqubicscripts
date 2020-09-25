@@ -1,0 +1,1463 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import qubic.sb_fitting as sbfit
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+import qubic.fibtools as ft
+import scipy.optimize as opt
+import numpy as np
+import math
+import pickle
+import seaborn as sns
+
+def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    x, y = xdatatuple
+    xo = float(xo)
+    yo = float(yo)    
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = offset + amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))
+    return g.ravel()
+```
+
+```{python}
+"""Here I will try to re run this analysis for all ghosted TES, I realised based off FindGhostedTES.ipynb that i should do this analysis for all TES"""
+
+ghostlist = [1, 4, 6, 12, 15, 16, 17, 22, 24, 26, 27, 28, 33, 34, 38, 43, 44, 45, 46, 49, 51, 53, 54, 57, 58, 
+             59, 60, 61, 62, 63, 64, 66, 67, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 81, 85, 86, 87, 88, 
+             89, 93, 94, 95, 96, 98, 99, 103, 105, 106, 107, 110, 117, 118, 120, 122, 123, 124, 127, 128, 129, 
+             131, 133, 134, 135, 136, 137, 138, 139, 140, 141, 145, 146, 147, 148, 149, 150, 153, 158, 159, 161,
+             162, 163, 166, 168, 170, 172, 177, 178, 181, 187, 188, 189, 193, 194, 195, 198, 199, 200, 201, 205,
+             208, 209, 210, 211, 212, 213, 214, 215, 216, 218, 219, 220, 221, 223, 224, 225, 233, 241, 245, 252, 
+             253]
+print(len(ghostlist))
+```
+
+```{python}
+"""20200104 comp list"""
+"""load 6 2020-01-14 flatmaps
+indeed we can see there are ghosts"""
+#here is a list of good tes for comparison
+#complist = [9, 16, 22, 24, 27, 50, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+    #170, 171, 172, 181, 186, 201, 208, 210, 213, 216, 218, 219]
+
+dirfile = '/home/james/synthbeamdata/2020-01-14'
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+flatmaps = np.zeros([len(ghostlist), 101, 101])
+
+for i, tes in enumerate(ghostlist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    #flatmap = np.flip(flatmap)
+    flatmaps[i, :, :] = flatmap
+
+plt.figure(figsize=(10,20))
+plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+#plt.xticks(np.arange(-12, 12, step=1))
+#plt.yticks(np.arange(45, 65, step=1))
+plt.grid(True)
+
+```
+
+```{python}
+AZ, EL = np.meshgrid(az, el)
+testmap = flatmaps[2,:,:]
+plt.figure(figsize=(10,10))
+#plt.subplot(1,2,1)
+plt.scatter(AZ.ravel(), EL.ravel(), c=testmap.ravel())
+plt.xticks(np.arange(min(az), max(az), step=2))
+plt.yticks(np.arange(min(el), max(el), step=2))
+plt.grid(True)
+# plt.subplot(1,2,2)
+# plt.imshow(flatmaps[2,:,:], aspect='equal')
+# plt.grid(True)
+```
+
+```{python}
+# %matplotlib inline
+azval = 8
+elval = 45
+initial_guess = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
+
+fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
+data_fitted = twoD_Gaussian((AZ, EL), *fit_params)
+fit_errors = np.sqrt(np.diag(cov_mat))
+
+print('Fit Amplitude:', fit_params[0], '\u00b1', fit_errors[0])
+print('Fit X-Center: ', fit_params[1], '\u00b1', fit_errors[1])
+print('Fit Y-Center: ', fit_params[2], '\u00b1', fit_errors[2])
+print('Fit X-Sigma:  ', fit_params[3], '\u00b1', fit_errors[3])
+print('Fit Y-Sigma:  ', fit_params[4], '\u00b1', fit_errors[4])
+
+plt.figure(figsize=(10,10))
+plt.imshow(testmap, aspect='equal', origin='lower',
+        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+```
+
+```{python}
+"""build a list or arrays of ghost centers OR do fits and acceptance criteria, 
+this method needs supervision
+add fit parameters to arrays to quantify
+perhaps pandas useful here"""
+# %matplotlib qt
+plt.figure(figsize=(10,10))
+plt.subplots(121)
+plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+plt.title("TES {}".format(tes))
+plt.xlabel("Azimuth [$^\circ$]")
+plt.ylabel("Elevation [$^\circ$]")
+#get peaks from plot
+var1, var2 = plt.ginput(2)
+print(var1[0], var1[1])
+
+#set up fitting
+initial_guess1 = (max(testmap.ravel()), var1[0], var1[1], 1, 1, 0, 0)
+initial_guess2 = (max(testmap.ravel()), var2[0], var2[1], 1, 1, 0, 0)
+fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess1)
+fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess2)
+data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
+fit_errors1 = np.sqrt(np.diag(cov_mat1))
+fit_errors2 = np.sqrt(np.diag(cov_mat2))
+
+#calculate angle
+dx = fit_params2[1] - fit_params1[1]
+dy = fit_params2[2] - fit_params1[2]
+ang = np.rad2deg(math.atan2(dy, dx))
+print(ang)
+
+#plot contour fits and text do second plot
+plt.subplots(121)
+plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+plt.title("TES {} Ghost Fitting".format(tes))
+plt.xlabel("Azimuth [$^\circ$]")
+plt.ylabel("Elevation [$^\circ$]")
+plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k', label='Peak 1')
+plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
+plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
+plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+
+#add relavant vars to arrays... once in the loop
+#plt.savefig("/home/james/ghostimages/ghostfits/ghostfits{}".format(tes))
+plt.pause(5)
+plt.close()
+```
+
+```{python}
+# """build arrays during loop to make satitistics
+# should have fitted centers for both fits, amps, ampratio, relative angle
+# I also need a way to tell during click fitting if fits are good
+# maybe just take notes as i loop
+# save fits as png"""
+# # %matplotlib qt
+# #new complist removes bad fits helps error exeptions
+# #remove 9, 50, 186
+# complist = [16, 22, 24, 27, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
+#     170, 171, 172, 181, 201, 208, 210, 213, 216, 218, 219]
+# #testcomplist
+# #complist = [16, 22, 24]
+
+# #print(len(complist))
+# fit1x = np.zeros(len(complist))
+# fit1y = np.zeros(len(complist))
+# fit2x = np.zeros(len(complist))
+# fit2y = np.zeros(len(complist))
+# amp1 = np.zeros(len(complist))
+# amp2 = np.zeros(len(complist))
+# ampr = np.zeros(len(complist))
+# angle = np.zeros(len(complist))
+# tesnum = np.zeros(len(complist))
+# fitsdata1 = np.zeros((len(complist),101,101))
+# fitsdata2 = np.zeros((len(complist),101,101))
+
+# for i, tes in enumerate(complist):
+
+#     #do plot
+#     plt.figure(figsize=(10,10))
+#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+#             extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+#     plt.title("TES {}".format(tes))
+#     plt.xlabel("Azimuth [$^\circ$]")
+#     plt.ylabel("Elevation [$^\circ$]")
+#     #get peaks from plot
+#     var1, var2 = plt.ginput(2)
+    
+#     #set up fitting
+#     initial_guess1 = (max(flatmaps[i,:,:].ravel()), var1[0], var1[1], 1, 1, 0, 0)
+#     initial_guess2 = (max(flatmaps[i,:,:].ravel()), var2[0], var2[1], 1, 1, 0, 0)
+#     fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess1)
+#     fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess2)
+#     data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+#     data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
+#     fit_errors1 = np.sqrt(np.diag(cov_mat1))
+#     fit_errors2 = np.sqrt(np.diag(cov_mat2))
+    
+#     #calculate angle
+#     dx = fit_params2[1] - fit_params1[1]
+#     dy = fit_params2[2] - fit_params1[2]
+#     ang = np.rad2deg(math.atan2(dy, dx))
+#     #print(ang)
+#     #plot contour fits and text
+#     plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
+#     plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
+#     plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+#     plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
+#     plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+
+#     #append arrays
+#     tesnum[i] = tes
+#     fit1x[i] = fit_params1[1]
+#     fit1y[i] = fit_params1[2]
+#     fit2x[i] = fit_params2[1]
+#     fit2y[i] = fit_params2[2]
+#     amp1[i] = fit_params1[0]
+#     amp2[i] = fit_params2[0]
+#     ampr[i] = fit_params1[0] / fit_params2[0]
+#     angle[i] = ang
+#     fitsdata1[i, :, :] = data_fitted1.reshape(101, 101)
+#     fitsdata2[i, :, :] = data_fitted2.reshape(101, 101)
+    
+    
+#     #add relavant vars to arrays... once in the loop
+#     plt.savefig("/home/james/ghostimages/ghostfitsr2/ghostfits{}".format(tes), bbox_inches='tight')
+#     plt.pause(3)
+#     plt.close()
+```
+
+```{python}
+# """make nice pdf like JC"""
+
+# plt.rc('figure',figsize=(16,8))
+# nnx = 5
+# nny=2
+# k=0
+# nplots = int(256/nnx/nny)+1
+
+# elmin = min(el)
+# elmax = max(el)
+# azmin = min(az)
+# azmax = max(az)
+
+
+# for k in range(nplots):
+#     plt.figure()
+#     for i in range(nnx*nny):
+#         ites = i+k*nnx*nny
+#         if ites < 256:
+#             plt.subplot(nny,nnx,i+1)
+#             mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+            
+#             plt.imshow(flatmaps[ites,:,:], aspect='equal', origin='lower',
+#                    extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+            
+#             plt.contour(AZ, EL, fitsdata1[ites], 3, colors='k')
+#             plt.contour(AZ, EL, fitsdata2[ites], 3, colors='r')
+#             plt.text(fit1x[ites]+1, fit1y[ites]+4, "{:08.2f}".format(amp1[ites], prec=2), {'color': 'k', 'fontsize': 12})
+#             plt.text(fit2x[ites]+1, fit2y[ites]+1, "{:08.2f}".format(amp2[ites], prec=2), {'color': 'r', 'fontsize': 12})
+#             plt.text(fit1x[ites], fit1y[ites]-3, "Angle {:03.2f}".format(angle[ites], prec=2), {'color': 'b', 'fontsize': 12})
+
+#             plt.title('TES {} Ghost Fits'.format(int(tesnum[ites])), fontsize=16)
+#             plt.savefig('/home/james/ghostimages/ghostfitsr2/jj{}.png'.format(k), bbox_inches='tight')
+#     plt.tight_layout()
+#     plt.show()
+```
+
+```{python}
+# # fitsdata1 = np.reshape(3,101,101)
+# # fitsdata2 = np.reshape(3,101,101)
+# print(fitsdata1.shape)
+```
+
+```{python}
+# """ do nice subplotter with raw and fits"""
+# """do comp list comparison plots"""
+# # %matplotlib inline
+# font = {'family': 'serif',
+#         'color':  'black',
+#         'weight': 'bold',
+#         'size': 14,
+#         }
+
+# for i, tes in enumerate(complist):
+    
+#     plt.figure(figsize=(16,6))
+#     plt.subplot(1,2,1)
+#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+#             extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+#     plt.title("TES {}".format(tes))
+#     plt.xlabel("Azimuth [$^\circ$]")
+#     plt.ylabel("Elevation [$^\circ$]")
+    
+#     #plot the ghost data
+#     plt.subplot(1,2,2)
+#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+#             extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+#     plt.title("TES {}".format(tes))
+#     plt.xlabel("Azimuth [$^\circ$]")
+#     plt.ylabel("Elevation [$^\circ$]")
+#         #plot contour fits and text
+#     plt.contour(AZ, EL, fitsdata1[i], 3, colors='k')
+#     plt.contour(AZ, EL, fitsdata2[i], 3, colors='r')
+```
+
+```{python}
+"""load the data"""
+```
+
+```{python}
+# datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle)).T
+# print(datmat.shape)
+# with open('objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+#     pickle.dump(datmat, f)
+
+#Getting back the objects:
+with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
+    datmat = pickle.load(f)
+
+#save fits data separately 
+# fitsmat = np.vstack((fitsdata1, fitsdata2))
+# with open('fits_objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+#     pickle.dump(fitsmat, f)
+```
+
+```{python}
+
+```
+
+```{python}
+#should remove 16, 57?, 181?, 210 to leave only good fits
+badlist = [16, 57, 181, 210]
+newarr = np.array([])
+print(datmat[2,:].shape)
+
+for i, tes in enumerate(datmat[:,0]):
+    #print(i, tes)
+    if tes not in badlist:
+        newarr = np.hstack((newarr, datmat[i,:]))
+        
+newarr = np.reshape(newarr, (30,9)).T
+        
+print(newarr.shape, newarr[:, 0])
+```
+
+```{python}
+"""now time to do statistics
+I should also do plot without the fits to show how they work
+I should also now start writing parts of this and doing plots in correct themes
+also do a git proj backup"""
+header = ["TESnum", "xp1", "yp1", "xp2", "yp2", "amp1", "amp2", "ampr", "angle"]
+#print(header)
+#print(newarr.shape)
+#newarr = newarr.T
+
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+#sns.palplot(current_palette)
+#calc average
+avg = np.mean(newarr[8])
+
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Angle [$^\circ$]")
+plt.plot(newarr[0], np.ones(len(newarr[8]))*np.mean(newarr[8]),
+         '--', color=current_palette[0], lw=5, markersize=12, label='Mean Angle {:3.2f}$^\circ$'.format(avg))
+plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Angle')
+plt.legend(loc='upper left')
+
+#plt.savefig("/home/james/ghostimages/plots/angles", bbox_inches='tight')
+```
+
+```{python}
+"""version 2 with standard deviation"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+#sns.palplot(current_palette)
+#calc average
+avg = np.mean(newarr[8])
+sd = np.sqrt(np.sum((newarr[8]-avg)**2) / len(newarr[8]))
+npsd = np.std(newarr[8], ddof=0)
+print(sd, npsd)
+sdp1 = avg+npsd
+sdp2 = avg-npsd
+
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Angle [$^\circ$]")
+plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Angle')
+plt.plot(newarr[0], np.ones(len(newarr[8]))*np.mean(newarr[8]),
+         '--', color=current_palette[1], lw=5, markersize=12, label='Mean {:3.2f}$^\circ$'.format(avg))
+
+#try plot stdv
+plt.plot(newarr[0], np.ones(len(newarr[8]))*sdp1, 
+         '--', color=current_palette[2], lw=5, markersize=12, label='\u03C3 = {:3.2f}$^\circ$'.format(npsd))
+plt.plot(newarr[0], np.ones(len(newarr[8]))*sdp2, 
+         '--', color=current_palette[2], lw=5, markersize=12)
+plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
+
+plt.legend(loc='upper left')
+
+#plt.savefig("/home/james/ghostimages/plots/anglesSDEV", bbox_inches='tight')
+```
+
+```{python}
+"""do histogram"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+plt.figure(figsize=(16,8))
+n, bins, patches = plt.hist(newarr[8], bins='auto', facecolor=current_palette[0],rwidth=0.95)
+plt.xlabel('Angle [$^\circ$]')
+plt.ylabel('Counts')
+
+#plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
+```
+
+```{python}
+# """load psfs"""
+# """load and plot simulation data"""
+# psflist = np.array([6, 37, 50, 58, 76, 93])
+
+# psfdata = np.zeros([6, 3, 251001])
+# for i, tes in enumerate(psflist):
+#     data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
+#     psfdata[i,:,:] = data.T
+    
+
+```
+
+```{python}
+# """do plpots"""
+# for i, tes in enumerate(psflist):
+
+#     plt.figure(figsize=(16,6))
+#     plt.subplot(1,2,1)
+#     plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
+#     plt.title('Sim data TES {}'.format(tes))
+    
+#     plt.subplot(1,2,2)
+#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+#     plt.title('Data TES {}'.format(tes))
+```
+
+```{python}
+"""do the same but with distance of TES from center"""
+```
+
+```{python}
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Peak Amplitude Ratio")
+
+plt.plot(newarr[0], newarr[7], '.-', color=current_palette[3], lw=4, markersize=20, label='Amplitude Ratio')
+plt.legend(loc='upper left')
+
+
+plt.twinx()
+plt.plot([newarr[0],newarr[0]], [newarr[5], newarr[6]], 'k-', lw=2, markersize=20);
+plt.plot(newarr[0], newarr[5], '.', color=current_palette[4], markersize=20, label='Main Peak Amplitude')
+plt.plot(newarr[0], newarr[6], '.', color=current_palette[2], markersize=20, label='Ghost Peak Amplitude')
+plt.ylabel("Peak Amplitude")
+plt.legend(loc='upper center')
+
+#plt.savefig("/home/james/ghostimages/plots/amplitudes", bbox_inches='tight')
+```
+
+```{python}
+"""take amplitude ratios and sdev"""
+avg = np.mean(newarr[7])
+sd = np.sqrt(np.sum((newarr[7]-avg)**2) / len(newarr[7]))
+npsd = np.std(newarr[7], ddof=0)
+print(sd, npsd)
+sdp1 = avg+npsd
+sdp2 = avg-npsd
+
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Peak Amplitude Ratio")
+
+plt.plot(newarr[0], newarr[7], '.', color=current_palette[3], lw=4, markersize=20, label='Amplitude Ratio')
+#plot avg
+plt.plot(newarr[0], np.ones(len(newarr[7]))*avg, 
+         '--', color=current_palette[1], lw=5, markersize=12, label='Mean {:3.2f}$^\circ$'.format(avg))
+#try plot stdv
+plt.plot(newarr[0], np.ones(len(newarr[7]))*sdp1, 
+         '--', color=current_palette[2], lw=5, markersize=12, label='\u03C3 = {:3.2f}$^\circ$'.format(npsd))
+plt.plot(newarr[0], np.ones(len(newarr[7]))*sdp2, 
+         '--', color=current_palette[2], lw=5, markersize=12)
+plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
+
+plt.legend(loc=(0.07, 0.75))
+#plt.savefig("/home/james/ghostimages/plots/amplitudesSDEV", bbox_inches='tight')
+```
+
+```{python}
+print(max(newarr[0]))
+print(np.mean(newarr[7]))
+```
+
+```{python}
+"""do histogram"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+plt.figure(figsize=(16,8))
+n, bins, patches = plt.hist(newarr[7], bins='auto', facecolor=current_palette[3],rwidth=0.95)
+plt.xlabel('Amplitude Ratio')
+plt.ylabel('Counts')
+
+#plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
+```
+
+```{python}
+
+#correctTESarr = [22, 24, 27, 51, 58, 59, 74, 75, 76, 86, 93, 106, 107, 11]
+
+"""tesnums for plotting on FP here we want to correct the array so that asic 2 tesnums get subtracted by 124
+this does seem to make sense if you consider qubicpacks timeline data
+split into 2 asics"""
+carr = [ 22,  24,  27,  51,  58,  59,  74,  75,  76,  86,  93, 106, 107, 110,
+        120, 123, 134, 135, 138, 141, 166, 170, 171, 172, 201, 208, 213, 216,
+        218, 219]
+
+carra1 = np.array([])
+carra2 = np.array([])
+
+for i in range(len(carr)):
+    
+    if carr[i] >=124:
+        carra2 = np.append(carra2, carr[i]-123)
+        
+    else:
+        carra1 = np.append(carra1, carr[i])
+        
+print(carr)
+print(carra1)
+print(carra2)
+```
+
+```{python}
+"""loadand plot pixcens"""
+import qubic
+d = qubic.qubicdict.qubicDict()
+d.read_from_file('../qubic/qubic/dicts/global_source_oneDet.dict')
+q = qubic.QubicMultibandInstrument(d)
+vtxs = q[0].detector.vertex
+#load qubicpack TESnums and flip*
+from qubicpack.pixel_translation import make_id_focalplane, plot_id_focalplane
+FPidentity = make_id_focalplane()
+#q3arr = np.array([])
+# for i in range(len(FPidentity.PIX)):
+#     #print(FPidentity[i].PIX)
+#     if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+#         q3arr = np.append(q3arr, FPidentity[i].TES)
+# q3arr = np.flip(q3arr)
+```
+
+```{python}
+"""repeat above plot with test TES carr"""
+"""PLOT"""
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+px = np.array([])
+py = np.array([])
+
+j=248
+for i in range(len(FPidentity.PIX)):
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
+        ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
+        
+        #print(i, FPidentity[i].TES, FPidentity[i].ASIC, cenx, ceny)
+        
+        plt.plot(cenx, ceny, 's', color=current_palette[0])
+        #plt.text(cenx+0.00025, ceny+0.0003,'Pix{}'.format(j), fontsize=10)
+        plt.text(cenx-0.0001, ceny+0.00035,'TES{}'.format(int(FPidentity[i].TES)), fontsize=10)
+        #plt.text(cenx+0.00025, ceny-0.001,'ASC{}'.format(int(FPidentity[i].ASIC)), fontsize=10)
+        
+        #if FPidentity[i].TES
+        
+        if FPidentity[i].ASIC == 1 and FPidentity[i].TES in carra1:
+            plt.plot(cenx, ceny, 's', color=current_palette[1])
+            
+            px = np.append(px, cenx)
+            py = np.append(py, ceny)
+            
+        if FPidentity[i].ASIC == 2 and FPidentity[i].TES in carra2:
+            plt.plot(cenx, ceny, 's', color=current_palette[2])
+            
+            px = np.append(px, cenx)
+            py = np.append(py, ceny)            
+        
+        j -= 1
+
+for i in range(len(px)):
+    plt.text(px[i]+0.00035, py[i]-0.00035, '{:3.2f}$^\circ$'.format(newarr[8,i]), fontsize=10)
+    plt.text(px[i]-0.0001, py[i]-0.001, 'AR {:3.2f}'.format(newarr[7,i]), fontsize=10)
+    
+plt.xlabel('X [m] FPRF')
+plt.ylabel('Y [m] FPRF')    
+#plt.savefig("/home/james/ghostimages/plots/FP", bbox_inches='tight')
+```
+
+```{python}
+print(newarr.shape)
+#newarr = newarr.T
+print(newarr[:,0])
+header = ["TESnum", "xp1", "yp1", "xp2", "yp2", "amp1", "amp2", "ampr", "angle"]
+
+print(px.shape)
+```
+
+```{python}
+carr2 = np.append(carra1, carra2)
+print(carr2)
+print(carr2.shape)
+```
+
+```{python}
+# print(r.shape, newarr[8,:].shape)
+```
+
+```{python}
+"""maybe fit a line and see if statitstically significant, does this indicate optical or electrical cause"""
+from scipy import stats
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+r = np.sqrt(px**2 + py**2)
+slope, intercept, r_value, p_value, std_err = stats.linregress(r, newarr[8,:])
+abline_values = [slope * i + intercept for i in r]
+plt.figure(figsize=(16,8))
+plt.plot(r, newarr[8,:], '.', color=current_palette[0], markersize=20)
+plt.plot(r, abline_values, color=current_palette[0], lw=5,
+         label='$r^2$ = {:3.4f} \nslope = {:3.4f} \nstd_err = {:3.4f}'.format(r_value**2, slope, std_err))
+plt.xlabel('Radius [m]')
+plt.ylabel("Angle [$^\circ$]")
+plt.legend()
+#plt.savefig("/home/james/ghostimages/plots/randanglev2", bbox_inches='tight')
+```
+
+```{python}
+"""Same plot for ratios"""
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+r = np.sqrt(px**2 + py**2)
+slope, intercept, r_value, p_value, std_err = stats.linregress(r, newarr[7,:])
+abline_values = [slope * i + intercept for i in r]
+
+plt.figure(figsize=(16,8))
+plt.plot(r, newarr[7,:], '.', color=current_palette[3], markersize=20)
+plt.plot(r, abline_values, color=current_palette[3], lw=5,
+         label='$r^2$ = {:3.4f} \nslope = {:3.4f} \nstd_err = {:3.4f}'.format(r_value**2, slope, std_err))
+plt.xlabel('Radius [m]')
+plt.ylabel("Amplitude Ratio")
+plt.legend()
+#plt.savefig("/home/james/ghostimages/plots/randamprv2", bbox_inches='tight')
+```
+
+```{python}
+"""set up arrays for tes COLS to match FPidentity.TES"""
+col1 = np.array([29, 30, 31, 32, 25, 26, 27, 28, 21, 22, 23, 24, 17, 18, 19, 20, 13, 14, 15, 16, 
+                 9, 10, 11, 12, 5, 6, 7, 8, 1, 2, 3, 4])
+col2 = np.array([61, 62, 63, 64, 57, 58, 59, 60, 53, 54, 55, 56, 49, 50, 51, 52, 45, 46, 47, 
+                 48, 41, 42, 43, 44, 37, 38, 39, 40, 33, 34, 35, 36])
+col3 = np.array([93, 94, 95, 96, 89, 90, 91, 92, 85, 86, 87, 88, 81, 82, 83, 84, 77, 78, 79, 
+                 80, 73, 74, 75, 76, 69, 70, 71, 72, 65, 66, 67, 68])
+col4 = np.array([125, 126, 127, 128, 121, 122, 123, 124, 117, 118, 119, 120, 113, 114, 115, 116,
+                 109, 110, 111, 112, 105, 106, 107, 108, 101, 102, 103, 104, 97, 98, 99, 100])
+#okay this is great but doesnt necessarily shown if they are next to each other on the SQUIDS
+squidorder = np.linspace(1, len(col1), len(col1))
+print(squidorder.shape)
+
+#ASIC1 cols
+
+col11 = np.array([])
+```
+
+```{python}
+"""try to plot SQUID ordering
+excel document has TES plotted from under-side..."""
+"""repeat above plot with test TES carr"""
+"""PLOT"""
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+px = np.array([])
+py = np.array([])
+
+j=248
+for i in range(len(FPidentity.PIX)):
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
+        ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
+                    
+        #plt.plot(cenx, ceny, 's', color=current_palette[0])
+        #plt.text(cenx+0.00025, ceny+0.0003,'Pix{}'.format(j), fontsize=10)
+        plt.text(cenx+0.00025, ceny-0.00035,'TES{}'.format(int(FPidentity[i].TES)), fontsize=10)
+        #plt.text(cenx+0.00025, ceny-0.001,'ASC{}'.format(int(FPidentity[i].ASIC)), fontsize=10)
+        
+        #if FPidentity[i].ASIC == 2:
+            #plt.plot(cenx, ceny, 's', color=current_palette[4])
+        
+        if FPidentity[i].ASIC == 1 and FPidentity[i].TES in carra1:
+            plt.plot(cenx, ceny, 's', color=current_palette[1])
+            
+            px = np.append(px, cenx)
+            py = np.append(py, ceny)
+            
+        if FPidentity[i].ASIC == 2 and FPidentity[i].TES in carra2:
+            plt.plot(cenx, ceny, 's', color=current_palette[2])
+        
+        j -= 1
+        
+    if FPidentity[i].ASIC == 2 and FPidentity[i].TES in col1:
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[5])
+    if FPidentity[i].ASIC == 2 and FPidentity[i].TES in col2:
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[9])
+    if FPidentity[i].ASIC == 2 and FPidentity[i].TES in col3:
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[7])
+    if FPidentity[i].ASIC == 2 and FPidentity[i].TES in col4:
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[8])
+        
+    if FPidentity[i].ASIC == 1 and FPidentity[i].TES in col1:
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[5])
+    if FPidentity[i].ASIC == 1 and FPidentity[i].TES in col2:
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[6])
+    if FPidentity[i].ASIC == 1 and FPidentity[i].TES in col3:
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[7])
+    if FPidentity[i].ASIC == 1 and FPidentity[i].TES in col4:
+        plt.plot(cenx, ceny-0.0004, 'D', color=current_palette[8])
+plt.xlabel('X [m] FPRF')
+plt.ylabel('Y [m] FPRF')    
+#plt.savefig("/home/james/ghostimages/plots/FP", bbox_inches='tight')
+```
+
+```{python}
+"""should build an array with TES numbers, PIX numbers, px, py, squid numbers, columns etc. for """
+"""then plot squid number per column with each TES"""
+px = np.array([])
+py = np.array([])
+idxs = np.array([])
+tesa = np.array([])
+asica = np.array([])
+squida = np.array([])
+cola = np.array([])
+#for some reason vertex arrays are in reverse index order so start j=248
+j=248
+for i in range(len(FPidentity.PIX)):
+    #find the 3rd TD quadrant and only select bolometers, deselect tempTES like this
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        #find the centers of the pixels from the vertex array
+        cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
+        ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
+        #add pixel locations for each bolometer
+        px = np.append(px, cenx)
+        py = np.append(py, ceny)
+        #reverse the indexing
+        j -= 1
+        #build index, tes, asic arrays
+        idxs = np.append(idxs, i)
+        tesa = np.append(tesa, FPidentity[i].TES)
+        asica = np.append(asica, FPidentity[i].ASIC)
+        #build squid numbering array
+        for k, p in enumerate(col1):
+            if p == FPidentity[i].TES:
+                #print(k,p, FPidentity[i].TES)
+                squida = np.append(squida, k+1)
+                cola = np.append(cola, 1)
+        for k, p in enumerate(col2):
+            if p == FPidentity[i].TES:
+                squida = np.append(squida, k+1)
+                cola = np.append(cola, 2)
+        for k, p in enumerate(col3):
+            if p == FPidentity[i].TES:
+                squida = np.append(squida, k+1)
+                cola = np.append(cola, 3)
+        for k, p in enumerate(col4):
+            if p == FPidentity[i].TES:
+                squida = np.append(squida, k+1)
+                cola = np.append(cola, 4)
+```
+
+```{python}
+print(px.shape, py.shape, idxs.shape, tesa.shape, asica.shape, squida.shape, cola.shape)
+print(squida[0], cola[0])
+print(squida)
+print(cola)
+print(len(col1)+len(col2)+len(col3)+len(col4))
+print(len(col1), len(col2), len(col3), len(col4))
+```
+
+```{python}
+"""try the same plot with additional/different info"""
+from matplotlib import colors as mcolors
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+plt.rcParams['axes.facecolor'] = 'honeydew'
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+
+for i in range(len(px)):
+    plt.plot(px[i], py[i], 'bs')
+    plt.text(px[i]+0.00025, py[i]+0.0004, "TES{}".format(int(tesa[i])), fontsize=10)
+    plt.text(px[i]+0.00025, py[i]-0.0004, "SQD{}".format(int(squida[i])), fontsize=10)
+    plt.text(px[i]+0.00025, py[i]-0.0011, "COL{}".format(int(cola[i])), fontsize=10)
+    
+    if cola[i] == 1 and asica[i] == 1:
+        plt.plot(px[i], py[i], 'rs')
+    if cola[i] == 2 and asica[i] == 1:
+        plt.plot(px[i], py[i], 'gs')
+    if cola[i] == 3 and asica[i] == 1:
+        plt.plot(px[i], py[i], 'bs')
+    if cola[i] == 4 and asica[i] == 1:
+        plt.plot(px[i], py[i], 'ms')
+    if cola[i] == 1 and asica[i] == 2:
+        plt.plot(px[i], py[i], 'ks')
+    if cola[i] == 2 and asica[i] == 2:
+        plt.plot(px[i], py[i], 'ys')
+    if cola[i] == 3 and asica[i] == 2:
+        plt.plot(px[i], py[i], 'cs')
+    if cola[i] == 4 and asica[i] == 2:
+        plt.plot(px[i], py[i], 's', color='tab:orange')
+        
+    if asica[i] == 1 and tesa[i] in carra1:
+        plt.plot(px[i], py[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
+    if asica[i] == 2 and tesa[i] in carra2:
+        plt.plot(px[i], py[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
+        
+
+```
+
+```{python}
+"""redo plot to make quadrant same as reference doc"""
+"""try the same plot with additional/different info"""
+from matplotlib import colors as mcolors
+font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 14,
+        }
+plt.rcParams['axes.facecolor'] = 'honeydew'
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+pxq = px*-1
+pyq = py*-1
+# pxq = px
+# pyq = py
+for i in range(len(px)):
+    plt.plot(pxq[i], pyq[i], 'bs')
+    plt.text(pxq[i]+0.00025, pyq[i]+0.0004, "TES{}".format(int(tesa[i])), fontsize=10)
+    plt.text(pxq[i]+0.00025, pyq[i]-0.0004, "SQD{}".format(int(squida[i])), fontsize=10)
+    plt.text(pxq[i]+0.00025, pyq[i]-0.0011, "COL{}".format(int(cola[i])), fontsize=10)
+    plt.text(pxq[i]+0.00025, pyq[i]-0.0018, "ASC{}".format(int(asica[i])), fontsize=10)
+    
+    if cola[i] == 1 and asica[i] == 1:
+        plt.plot(pxq[i], pyq[i], 'rs')
+    if cola[i] == 2 and asica[i] == 1:
+        plt.plot(pxq[i], pyq[i], 'gs')
+    if cola[i] == 3 and asica[i] == 1:
+        plt.plot(pxq[i], pyq[i], 'bs')
+    if cola[i] == 4 and asica[i] == 1:
+        plt.plot(pxq[i], pyq[i], 'ms')
+    if cola[i] == 1 and asica[i] == 2:
+        plt.plot(pxq[i], pyq[i], 'ks')
+    if cola[i] == 2 and asica[i] == 2:
+        plt.plot(pxq[i], pyq[i], 'ys')
+    if cola[i] == 3 and asica[i] == 2:
+        plt.plot(pxq[i], pyq[i], 'cs')
+    if cola[i] == 4 and asica[i] == 2:
+        plt.plot(pxq[i], pyq[i], 's', color='tab:orange')
+        
+    if asica[i] == 1 and tesa[i] in carra1:
+        plt.plot(pxq[i], pyq[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
+    if asica[i] == 2 and tesa[i] in carra2:
+        plt.plot(pxq[i], pyq[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
+        
+
+```
+
+```{python}
+"""try see if squid number relationship"""
+plt.rcParams['axes.facecolor'] = 'w'
+
+print(carra1.shape, carra2.shape, px.shape)
+sqa = np.array([])
+
+for i in range(len(px)):
+    if asica[i] == 1 and tesa[i] in carra1:
+        print(asica[i], squida[i])
+        sqa = np.append(sqa, squida[i])
+    if asica[i] == 2 and tesa[i] in carra2:
+        print(asica[i], squida[i])
+        sqa = np.append(sqa, squida[i])
+print(sqa.shape, len(np.unique(sqa)))
+#plt.plot(np.linspace(1, len(col1), len(col1)), sqa, '.')
+plt.figure(figsize=(16,8))
+plt.plot(sqa, '.')
+plt.figure(figsize=(16,8))
+plt.hist(sqa, bins=np.linspace(1, len(col1), len(col1)), facecolor=current_palette[0],rwidth=0.95)
+plt.xlabel('Squid Columns (ASIC1&2)')
+```
+
+```{python}
+# """do a stacked bar chart with each color a different squid column on asics"""
+
+# colar11 = np.array([])
+# colar12 = np.array([])
+# colar13 = np.array([])
+# colar14 = np.array([])
+# colar21 = np.array([])
+# colar22 = np.array([])
+# colar23 = np.array([])
+# colar24 = np.array([])
+
+# for i in range(len(px)):
+#     #here we check asic number and if tes is a ghost tes
+#     #and if that ghost tes is in column of the squidasic
+#     #then we add to array if ghosted as 1, else 0
+#     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 1:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar21 = np.append(colar21, 1)
+#     if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 1:
+#         #print("not in")
+#         colar21 = np.append(colar21, 0)
+#     #do column2 asic 2
+#     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 2:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar22 = np.append(colar22, 1)        
+#     if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 2:
+#         #print("not in")
+#         colar22 = np.append(colar22, 0)
+#     #do column3 asic 2
+#     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 3:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar23 = np.append(colar23, 1)        
+#     if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 3:
+#         #print("not in")
+#         colar23 = np.append(colar23, 0)
+#     #do column4 asic 2
+#     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 4:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar24 = np.append(colar24, 1)        
+#     if asica[i] == 2 and tesa[i] not in carra2 and cola[i] == 4:
+#         #print("not in")
+#         colar24 = np.append(colar24, 0)
+# #now do the same for asic1
+#     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 1:
+#         print(tesa[i], asica[i], cola[i], squida[i])
+#         colar11 = np.append(colar11, 1)
+#     if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 1:
+#         #print("not in")
+#         colar11 = np.append(colar11, 0)
+#     #do column2 asic 2
+#     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 2:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar12 = np.append(colar12, 1)        
+#     if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 2:
+#         #print("not in")
+#         colar12 = np.append(colar12, 0)
+#     #do column3 asic 2
+#     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 3:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar13 = np.append(colar13, 1)        
+#     if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 3:
+#         #print("not in")
+#         colar13 = np.append(colar13, 0)
+#     #do column4 asic 2
+#     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 4:
+#         #print(tesa[i], asica[i], cola[i])
+#         colar14 = np.append(colar14, 1)        
+#     if asica[i] == 1 and tesa[i] not in carra1 and cola[i] == 4:
+#         #print("not in")
+#         colar14 = np.append(colar14, 0)
+        
+# """I dont think this is doing what I want appeneding does give right order
+# need to do something positional/indexing"""
+```
+
+```{python}
+"""do a stacked bar chart with each color a different squid column on asics"""
+
+colar11 = np.zeros(31)
+colar12 = np.zeros(31)
+colar13 = np.zeros(31)
+colar14 = np.zeros(31)
+colar21 = np.zeros(31)
+colar22 = np.zeros(31)
+colar23 = np.zeros(31)
+colar24 = np.zeros(31)
+
+for i in range(len(px)):
+    #here we check asic number and if tes is a ghost tes
+    #and if that ghost tes is in column of the squidasic
+    #then we add to array if ghosted as 1, else 0
+    if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 1:
+        colar21[int(squida[i])] = 1
+
+    #do column2 asic 2
+    if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 2:
+        colar22[int(squida[i])] = 1      
+
+    #do column3 asic 2
+    if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 3:
+        colar23[int(squida[i])] = 1       
+
+    #do column4 asic 2
+    if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 4:
+        colar24[int(squida[i])] = 1      
+
+#now do the same for asic1
+    if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 1:
+        colar11[int(squida[i])] = 1
+
+    #do column2 asic 2
+    if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 2:
+        colar12[int(squida[i])] = 1      
+
+    #do column3 asic 2
+    if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 3:
+        colar13[int(squida[i])] = 1        
+
+    #do column4 asic 2
+    if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 4:
+        colar14[int(squida[i])] = 1       
+      
+
+```
+
+```{python}
+#print(np.linspace(1, len(colar11), len(colar11)))
+print(colar21, colar21.shape)
+print(colar22, colar22.shape)
+print(colar23, colar23.shape)
+print(colar24, colar24.shape)
+print(colar11, colar11.shape)
+print(colar12, colar12.shape)
+print(colar13, colar13.shape)
+print(colar14, colar14.shape)
+```
+
+```{python}
+#cols = np.add(colar11, colar12, colar13, colar14, colar21, colar22, colar23)
+r = np.linspace(1, len(colar21), len(colar21))
+#names = ["Col1ASIC1", "COL2ASIC1"]
+width=1
+plt.figure(figsize=(16,8))
+plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1 COL1")
+plt.bar(r, colar12, color=current_palette[1], edgecolor='white', width=width, bottom=colar11, 
+        label="ASIC1 COL2")
+plt.bar(r, colar13, color=current_palette[2], edgecolor='white', width=width, bottom=colar11+colar12,
+       label="ASIC1 COL3")
+plt.bar(r, colar14, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13,
+       label="ASIC1 COL4")
+plt.bar(r, colar21, color=current_palette[4], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14, label="ASIC2 COL1")
+plt.bar(r, colar22, color=current_palette[5], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21, label="ASIC2 COL2")
+plt.bar(r, colar23, color=current_palette[6], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar22, label="ASIC2 COL3")
+plt.bar(r, colar24, color=current_palette[7], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar23, label="ASIC2 COL4")
+plt.legend()
+```
+
+```{python}
+"""do the same coloured by ASIC"""
+r = np.linspace(1, len(colar21), len(colar21))
+#names = ["Col1ASIC1", "COL2ASIC1"]
+width=1
+plt.figure(figsize=(16,8))
+plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1")
+plt.bar(r, colar12, color=current_palette[0], edgecolor='white', width=width, bottom=colar11, 
+        label="ASIC1")
+plt.bar(r, colar13, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12,
+       label="ASIC1")
+plt.bar(r, colar14, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12+colar13,
+       label="ASIC1")
+plt.bar(r, colar21, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14, label="ASIC2")
+plt.bar(r, colar22, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21, label="ASIC2")
+plt.bar(r, colar23, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar22, label="ASIC2")
+plt.bar(r, colar24, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar23, label="ASIC2")
+plt.legend()
+```
+
+```{python}
+"""the same coloured by column"""
+r = np.linspace(1, len(colar21), len(colar21))
+#names = ["Col1ASIC1", "COL2ASIC1"]
+width=1
+plt.figure(figsize=(16,8))
+plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1 COL1")
+plt.bar(r, colar12, color=current_palette[1], edgecolor='white', width=width, bottom=colar11, 
+        label="ASIC1 COL2")
+plt.bar(r, colar13, color=current_palette[2], edgecolor='white', width=width, bottom=colar11+colar12,
+       label="ASIC1 COL3")
+plt.bar(r, colar14, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13,
+       label="ASIC1 COL4")
+plt.bar(r, colar21, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14, label="ASIC2 COL1")
+plt.bar(r, colar22, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21, label="ASIC2 COL2")
+plt.bar(r, colar23, color=current_palette[2], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar22, label="ASIC2 COL3")
+plt.bar(r, colar24, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13
+        +colar14+colar21+colar23, label="ASIC2 COL4")
+plt.legend()
+```
+
+```{python}
+# x = np.vstack([colar11, colar12, colar13, colar14, colar21, colar22, colar23, colar24]).T
+# print(x.shape)
+# n_bins=len(colar21)
+# labels = ["ASIC1COL1", "ASIC1COL2", "ASIC1COL3", "ASIC1COL4", "ASIC2COL1", "ASIC2COL2", "ASIC2COL3", "ASIC2COL4"]
+# plt.hist(x, n_bins, histtype='bar', stacked=True, label=labels)
+# plt.legend(loc="upper right")
+# plt.title('Stacked-histogram ')
+# plt.show()
+```
+
+```{python}
+"""Still need to test tes beside each other on squid. of the ghost on sqd24 is the same image as on sqd23 or sqd25
+This is really important, seems most likely and this is actually what i intended to do originally but got side tracked along the way
+albiet, necessarily so"""
+```
+
+```{python}
+print(sqa.shape)
+```
+
+```{python}
+"""use tes with ghosts and find tes near each other on the PAD"""
+newcola1 = np.array([])
+
+for i in range(len(px)):
+    if asica[i] ==1 and tesa[i] in carra1:
+        print("Ghost Info")
+        print(tesa[i], squida[i], cola[i])
+        print("Ghost +- 1", tesa)
+print(carra1)
+
+```
+
+```{python}
+dirfile = '/home/james/synthbeamdata/2020-01-14'
+
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+
+
+TESNum = 27
+
+flatmap27, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap27))
+
+#print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+
+
+plt.figure(figsize=(12,16))
+plt.imshow(flatmap27, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+plt.xticks(fontsize=18)
+plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+plt.yticks(fontsize=18)
+#plt.savefig("/home/james/ghostimages/thesisplots/2020tes76", bbox_inches='tight')
+```
+
+```{python}
+TESNum = 28
+
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+
+#print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+
+
+plt.figure(figsize=(12,16))
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+plt.xticks(fontsize=18)
+plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+plt.yticks(fontsize=18)
+```
+
+```{python}
+TESNum = 26
+
+flatmap, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = azmin, azmax=azmax)
+npix = len(np.ravel(flatmap))
+
+#print(flatmap.shape, max(flatmap.ravel()), min(flatmap.ravel()))
+
+AZ, EL = np.meshgrid(az, el)
+
+
+plt.figure(figsize=(12,16))
+plt.imshow(flatmap, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+plt.xticks(fontsize=18)
+plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+plt.yticks(fontsize=18)
+```
+
+```{python}
+with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
+    datmat = pickle.load(f)
+```
+
+```{python}
+header = ["TESnum", "xp1", "yp1", "xp2", "yp2", "amp1", "amp2", "ampr", "angle"]
+print(datmat.shape)
+print(header)
+print(datmat[0])
+
+```
+
+```{python}
+print(tesa)
+print(asica)
+print(complist)
+```
+
+```{python}
+"""do the 4x1 plot as in notes"""
+dirfile = '/home/james/synthbeamdata/2020-01-14'
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+#ghost, -1, +1
+maps = [26, 27, 28]
+flatmapg, az, el = sbfit.get_flatmap(maps[1], dirfile, azmin = azmin, azmax=azmax)
+flatmapm, az, el = sbfit.get_flatmap(maps[0], dirfile, azmin = azmin, azmax=azmax)
+flatmapp, az, el = sbfit.get_flatmap(maps[2], dirfile, azmin = azmin, azmax=azmax)
+AZ, EL = np.meshgrid(az, el)
+
+
+# %matplotlib qt
+plt.figure(figsize=(16,8))
+plt.subplot(1,4,1)
+plt.imshow(flatmapm, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.title("TES{} SQD-1".format(int(maps[0])))
+plt.subplot(1,4,2)
+plt.imshow(flatmapg, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.title("TES{} Ghost".format(int(maps[1])))
+plt.subplot(1,4,3)
+plt.imshow(flatmapp, aspect='equal', origin='lower',
+          extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+plt.title("TES{} SQD+1".format(int(maps[2])))
+
+
+# plt.xlabel('Azimuth [$^\circ$]', fontsize=18)
+# plt.xticks(fontsize=18)
+# plt.ylabel('Elevation [$^\circ$]', fontsize=18)
+# plt.yticks(fontsize=18)
+
+#now attempt fitting 2 peaks to each image
+xys = plt.ginput(6)
+#plt.close()
+
+initial_guess1 = (max(flatmapm.ravel()), xys[0][0], xys[0][1], 1, 1, 0, 0)
+initial_guessg2 = (max(flatmapm.ravel()), xys[1][0], xys[1][1], 1, 1, 0, 0)
+# initial_guessm1 = (max(flatmapm.ravel()), xys[2][0], xys[2][1], 1, 1, 0, 0)
+# initial_guessm2 = (max(flatmapm.ravel()), xys[3][0], xys[3][1], 1, 1, 0, 0)
+# initial_guessp1 = (max(flatmapp.ravel()), xys[4][0], xys[4][1], 1, 1, 0, 0)
+# initial_guessp2 = (max(flatmapp.ravel()), xys[5][0], xys[5][1], 1, 1, 0, 0)
+
+fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmapm.ravel(), p0=initial_guess1)
+data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+plt.subplot(1,4,1)
+plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
+plt.xlim([np.min(AZ)*c50, np.max(AZ)*c50])
+plt.ylim([np.min(EL), np.max(EL)])
+```
+
+```{python}
+"""sideline this method i only needed qt from before"""
+# # %matplotlib qt
+# peaks1 = np.array([])
+# peaks2 = np.array([])
+
+# for i, tes in enumerate(maps):
+#     flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+#     AZ, EL = np.meshgrid(az, el)
+    
+#     plt.figure(figsize=(16,8))
+#     plt.imshow(flatmap, aspect='equal', origin='lower',
+#           extent=[np.min(AZ)*c50, np.max(AZ)*c50, np.min(EL), np.max(EL)])
+#     plt.title("TES {}".format(tes))
+#     plt.xlabel("Azimuth [$^\circ$]")
+#     plt.ylabel("Elevation [$^\circ$]")
+    
+#     peak1, peak2 = plt.ginput(2)
+#     peaks1 = np.append(peaks1, peak1)
+#     peaks2 = np.append(peaks2, peak2)
+    
+# print(peaks1, peaks2)
+```
+
+```{python}
+print(xys, xys[0], xys[0][0])
+```
+
+```{python}
+print((AZp == AZg).all())
+```
+
+```{python}
+"""HERE BE DRAGONS... all just test code below"""
+
+```
+
+```{python}
+
+```
+
+```{python}
+# azval = 1
+# elval = 54
+# #print(AZ.shape, testmap.shape, np.mean(testmap))
+# taz = AZ.ravel()
+# tel = EL.ravel()
+# testmap = testmap.ravel()
+# #set values around points to zero or some number
+# for i, azz in enumerate(taz.ravel()):
+#     if abs(azz - azval) > 3:      
+#         testmap[i] = 2000
+#         testaz = np.append(testaz, azz)
+        
+# for i, ell in enumerate(tel.ravel()): 
+#     if abs(ell - elval) > 3:      
+#         testmap[i] = 2000
+#         testel = np.append(testel, ell)
+
+# for i, azz in enumerate(taz.ravel()):
+#     for j, ell in enumerate(tel.ravel()):
+#         if abs(azz - azval) > 3 and abs(ell - elval) > 3:
+#             testmap[j] = 1000
+#             testaz = np.append(testaz, azz)
+#             testel = np.append(testel, ell)
+            
+# for i, azz in enumerate(taz):
+#     for j, ell in enumerate(tel):
+#         if abs(azz - azval) < 3 and abs(ell - elval) < 3:
+#             testaz = np.append(testaz, azz)
+#             testel = np.append(testel, ell)
+#             newmap = np.append(newmap, testmap[j])
+            #print("Found region", azz, ell, testmap[j])
+            
+
+# print(testaz.shape, testel.shape)
+
+# azmesh = testaz.reshape(101, 101)
+# mapmesh = testmap.reshape(101,101)
+# print(testmap.shape, type(testmap), type(mapmesh), mapmesh.shape, max(testmap))
+
+# initial_guess = (200000, azval, elval, 2, 2, 0, 0)
+# popt, pcov = opt.curve_fit(twoD_Gaussian, (AZ, EL), mapmesh.ravel(), p0=initial_guess)
+# data_fitted = twoD_Gaussian((AZ, EL), *popt)
+
+# plt.figure(figsize=(10,20))
+# plt.imshow(mapmesh, aspect='equal',
+#         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+
+# plt.contour(AZ, EL, data_fitted.reshape(101, 101), 3, colors='k')
+# plt.xticks(np.arange(-12, 12, step=1))
+# plt.yticks(np.arange(45, 65, step=1))
+# plt.grid(True)
+# plt.axis([np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+# print(popt)
+# print(pcov)
+# p_sigma = np.sqrt(np.diag(pcov))
+# print(p_sigma)
+```
+
+```{python}
+
+```
+
+```{python}
+
+```
+
+```{python}
+
+```
+
+```{python}
+
+```

@@ -93,7 +93,37 @@ for k in range(nplots):
                    extent=[np.cos(np.radians(50))*azmin, np.cos(np.radians(50))*azmax, elmin, elmax],
                    vmin=mm-ss, vmax=mm+30*ss)
             plt.title('TES {}'.format(ites+1))
-            plt.savefig('jj{}.png'.format(k))
+            #plt.savefig('jj{}.png'.format(k))
+    plt.tight_layout()
+    plt.show()
+```
+
+```{python}
+"""make nice pdf like JC"""
+
+plt.rc('figure',figsize=(16,8))
+nnx = 5
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+elmin = min(el)
+elmax = max(el)
+azmin = min(az)
+azmax = max(az)
+
+
+for k in range(nplots):
+    plt.figure()
+    for i in range(nnx*nny):
+        ites = i+k*nnx*nny
+        if ites < 256:
+            plt.subplot(nny,nnx,i+1)
+            mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+            plt.imshow(flatmaps[ites,:,:], aspect='equal',
+                   extent=[np.cos(np.radians(50))*azmin, np.cos(np.radians(50))*azmax, elmin, elmax])
+            plt.title('TES {}'.format(ites+1))
+            #plt.savefig('jj{}.png'.format(k))
     plt.tight_layout()
     plt.show()
 ```
