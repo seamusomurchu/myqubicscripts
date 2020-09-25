@@ -1,0 +1,289 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import numpy as np
+import glob
+import matplotlib.pyplot as plt
+```
+
+```{python}
+cutdir = '/home/james/graspfiles/newsourcetesting/'
+#print(glob.glob(cutdir+"*.cut"))
+cuts = glob.glob(cutdir+"*cut.cut")
+print(cuts)
+print(cuts[0])
+print(cuts[1])
+print(cuts[2])
+```
+
+```{python}
+newcut = np.loadtxt(cuts[0], skiprows=3, delimiter=',').T
+oldcut = np.loadtxt(cuts[1], skiprows=3, delimiter=',').T
+gauscut = np.loadtxt(cuts[2], skiprows=3, delimiter=',').T
+```
+
+```{python}
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+plt.plot(gauscut[0,:], gauscut[1,:], label='Gaussian Model', linewidth=3)
+plt.plot(oldcut[0,:], oldcut[1,:], label='Previous Aperture Field', linewidth=3)
+plt.plot(newcut[0,:], newcut[1,:], label='Updated Aperture Field', linewidth=3)
+
+plt.legend(loc='upper right')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Angle $\theta$ ($^\circ$)')
+plt.title('Source Comparison 200 mm Spherical Cut')
+plt.xlim(0,90)
+plt.ylim(-85, -31)
+#plt.savefig("/home/james/graspfiles/newsourcetesting/prem1sources.png", bbox_inches='tight')
+```
+
+```{python}
+cutdir = '/home/james/graspfiles/newsourcetesting/'
+fpcuts = glob.glob(cutdir+"*deg.cut")
+fpcuts.sort()
+for file in fpcuts:
+    print(file)
+    
+fpgaus0 = np.loadtxt(fpcuts[0], skiprows=3, delimiter=',').T
+fpgaus45 = np.loadtxt(fpcuts[1], skiprows=3, delimiter=',').T
+fpgaus90 = np.loadtxt(fpcuts[2], skiprows=3, delimiter=',').T
+fpold0 = np.loadtxt(fpcuts[3], skiprows=3, delimiter=',').T
+fpold45 = np.loadtxt(fpcuts[4], skiprows=3, delimiter=',').T
+fpold90 = np.loadtxt(fpcuts[5], skiprows=3, delimiter=',').T
+fpnew0 = np.loadtxt(fpcuts[6], skiprows=3, delimiter=',').T
+fpnew45 = np.loadtxt(fpcuts[7], skiprows=3, delimiter=',').T
+fpnew90 = np.loadtxt(fpcuts[8], skiprows=3, delimiter=',').T
+
+```
+
+```{python}
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+plt.plot(fpgaus0[0,:], fpgaus0[1,:], label=r'Gaussian', linewidth=3)
+plt.plot(fpold0[0,:], fpold0[1,:], label=r'Old Source', linewidth=3)
+plt.plot(fpnew0[0,:], fpnew0[1,:], label=r'New Source', linewidth=3)
+
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'Source Comparison 0$^\circ$ ONFPRF Focal Plane')
+plt.fill([-0.1, -0.06, -0.06, -0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.fill([0.1, 0.06, 0.06, 0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.xlim(-0.1, 0.1)
+plt.ylim(-80, -35)
+#plt.savefig("/home/james/graspfiles/newsourcetesting/fp0deg.png", bbox_inches='tight')
+```
+
+```{python}
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+plt.plot(fpgaus45[0,:], fpgaus45[1,:], label=r'Gaussian', linewidth=3)
+plt.plot(fpold45[0,:], fpold45[1,:], label=r'Old Source', linewidth=3)
+plt.plot(fpnew45[0,:], fpnew45[1,:], label=r'New Source', linewidth=3)
+
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'Source Comparison 45$^\circ$ ONFPRF Focal Plane')
+plt.fill([-0.1, -0.06, -0.06, -0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.fill([0.1, 0.06, 0.06, 0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.xlim(-0.1, 0.1)
+plt.ylim(-80, -35)
+#plt.savefig("/home/james/graspfiles/newsourcetesting/fp45deg.png", bbox_inches='tight')
+```
+
+```{python}
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+plt.plot(fpgaus90[0,:], fpgaus90[1,:], label=r'Gaussian', linewidth=3)
+plt.plot(fpold90[0,:], fpold90[1,:], label=r'Old Source', linewidth=3)
+plt.plot(fpnew90[0,:], fpnew90[1,:], label=r'New Source', linewidth=3)
+
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'Source Comparison 90$^\circ$ ONFPRF Focal Plane')
+plt.fill([-0.1, -0.06, -0.06, -0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.fill([0.1, 0.06, 0.06, 0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.xlim(-0.1, 0.1)
+plt.ylim(-80, -35)
+#plt.savefig("/home/james/graspfiles/newsourcetesting/fp90deg.png", bbox_inches='tight')
+```
+
+```{python}
+"""Now the same but zooms"""
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+plt.plot(fpgaus0[0,:], fpgaus0[1,:], label=r'Gaussian', linewidth=3)
+plt.plot(fpold0[0,:], fpold0[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew0[0,:], fpnew0[1,:], label=r'New Source', linewidth=3)
+
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'Source Comparison 0$^\circ$ ONFPRF Focal Plane Region')
+plt.xlim(-0.06, 0.06)
+plt.ylim(-50, -36)
+#plt.savefig("/home/james/graspfiles/newsourcetesting/fp0degzoom.png", bbox_inches='tight')
+
+#45deg
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+plt.plot(fpgaus45[0,:], fpgaus45[1,:], label=r'Gaussian', linewidth=3)
+plt.plot(fpold45[0,:], fpold45[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew45[0,:], fpnew45[1,:], label=r'New Source', linewidth=3)
+
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'Source Comparison 45$^\circ$ ONFPRF Focal Plane Region')
+plt.xlim(-0.06, 0.06)
+plt.ylim(-50, -36)
+#plt.savefig("/home/james/graspfiles/newsourcetesting/fp45degzoom.png", bbox_inches='tight')
+
+#90deg
+plt.rc('font', **font)
+plt.figure(figsize=(16,8))
+
+plt.plot(fpgaus90[0,:], fpgaus90[1,:], label=r'Gaussian', linewidth=3)
+plt.plot(fpold90[0,:], fpold90[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew90[0,:], fpnew90[1,:], label=r'New Source', linewidth=3)
+
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'Source Comparison 90$^\circ$ ONFPRF Focal Plane Region')
+plt.xlim(-0.06, 0.06)
+plt.ylim(-50, -36)
+#plt.savefig("/home/james/graspfiles/newsourcetesting/fp90degzoom.png", bbox_inches='tight')
+```
+
+```{python}
+"""try this plot in a 2x3 arrangement"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 20}
+plt.rc('font', **font)
+plt.figure(figsize=(16,16))
+
+plt.subplot(3,2,1 )
+
+plt.plot(fpgaus0[0,:], fpgaus0[1,:], label=r'Gaussian Model', linewidth=3)
+plt.plot(fpold0[0,:], fpold0[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew0[0,:], fpnew0[1,:], label=r'Updated Aperture Field', linewidth=3)
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'0$^\circ$ ONFPRF Focal Plane Extended')
+plt.fill([-0.1, -0.06, -0.06, -0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.fill([0.1, 0.06, 0.06, 0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.xlim(-0.1, 0.1)
+plt.ylim(-80, -35)
+
+plt.subplot(3,2,2)
+plt.plot(fpgaus0[0,:], fpgaus0[1,:], label=r'Gaussian Model', linewidth=3)
+plt.plot(fpold0[0,:], fpold0[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew0[0,:], fpnew0[1,:], label=r'Updated Aperture Field', linewidth=3)
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'0$^\circ$ ONFPRF Focal Plane')
+plt.xlim(-0.06, 0.06)
+plt.ylim(-50, -36)
+
+plt.subplot(3,2,3)
+plt.plot(fpgaus45[0,:], fpgaus45[1,:], label=r'Gaussian Model', linewidth=3)
+plt.plot(fpold45[0,:], fpold45[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew45[0,:], fpnew45[1,:], label=r'Updated Aperture Field', linewidth=3)
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'45$^\circ$ ONFPRF Focal Plane Extended')
+plt.fill([-0.1, -0.06, -0.06, -0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.fill([0.1, 0.06, 0.06, 0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.xlim(-0.1, 0.1)
+plt.ylim(-80, -35)
+
+plt.subplot(3,2,4)
+plt.plot(fpgaus45[0,:], fpgaus45[1,:], label=r'Gaussian Model', linewidth=3)
+plt.plot(fpold45[0,:], fpold45[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew45[0,:], fpnew45[1,:], label=r'Updated Aperture Field', linewidth=3)
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'45$^\circ$ ONFPRF Focal Plane')
+plt.xlim(-0.06, 0.06)
+plt.ylim(-50, -36)
+
+plt.subplot(3,2,5)
+plt.plot(fpgaus90[0,:], fpgaus90[1,:], label=r'Gaussian Model', linewidth=3)
+plt.plot(fpold90[0,:], fpold90[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew90[0,:], fpnew90[1,:], label=r'Updated Aperture Field', linewidth=3)
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'90$^\circ$ ONFPRF Focal Plane Extended')
+plt.fill([-0.1, -0.06, -0.06, -0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.fill([0.1, 0.06, 0.06, 0.1], [-80, -80, -30, -30], 'k', alpha=0.2)
+plt.xlim(-0.1, 0.1)
+plt.ylim(-80, -35)
+
+plt.subplot(3,2,6)
+plt.plot(fpgaus90[0,:], fpgaus90[1,:], label=r'Gaussian Model', linewidth=3)
+plt.plot(fpold90[0,:], fpold90[1,:], label=r'Previous Aperture Field', linewidth=3)
+plt.plot(fpnew90[0,:], fpnew90[1,:], label=r'Updated Aperture Field', linewidth=3)
+plt.legend(loc='lower left')
+plt.grid(True)
+plt.ylabel("Intenisty (dB)")
+plt.xlabel(r'Focal Plane (m)')
+plt.title(r'90$^\circ$ ONFPRF Focal Plane')
+plt.xlim(-0.06, 0.06)
+plt.ylim(-50, -36)
+
+plt.tight_layout()
+
+#plt.savefig("/home/james/graspfiles/newsourcetesting/3x2.png", bbox_inches='tight')
+```
+
+```{python}
+
+```
