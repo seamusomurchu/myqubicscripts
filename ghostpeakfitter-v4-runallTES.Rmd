@@ -121,7 +121,7 @@ add fit parameters to arrays to quantify
 perhaps pandas useful here"""
 # %matplotlib qt
 plt.figure(figsize=(10,10))
-plt.subplots(121)
+#plt.subplots(121)
 plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
 plt.title("TES {}".format(tes))
@@ -148,7 +148,7 @@ ang = np.rad2deg(math.atan2(dy, dx))
 print(ang)
 
 #plot contour fits and text do second plot
-plt.subplots(121)
+#plt.subplots(121)
 plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
 plt.title("TES {} Ghost Fitting".format(tes))
@@ -173,78 +173,73 @@ plt.close()
 # maybe just take notes as i loop
 # save fits as png"""
 # # %matplotlib qt
-# #new complist removes bad fits helps error exeptions
-# #remove 9, 50, 186
-# complist = [16, 22, 24, 27, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
-#     170, 171, 172, 181, 201, 208, 210, 213, 216, 218, 219]
-# #testcomplist
-# #complist = [16, 22, 24]
+#new complist removes bad fits helps error exeptions
 
-# #print(len(complist))
-# fit1x = np.zeros(len(complist))
-# fit1y = np.zeros(len(complist))
-# fit2x = np.zeros(len(complist))
-# fit2y = np.zeros(len(complist))
-# amp1 = np.zeros(len(complist))
-# amp2 = np.zeros(len(complist))
-# ampr = np.zeros(len(complist))
-# angle = np.zeros(len(complist))
-# tesnum = np.zeros(len(complist))
-# fitsdata1 = np.zeros((len(complist),101,101))
-# fitsdata2 = np.zeros((len(complist),101,101))
+#print(len(complist))
+fit1x = np.zeros(len(ghostlist))
+fit1y = np.zeros(len(ghostlist))
+fit2x = np.zeros(len(ghostlist))
+fit2y = np.zeros(len(ghostlist))
+amp1 = np.zeros(len(ghostlist))
+amp2 = np.zeros(len(ghostlist))
+ampr = np.zeros(len(ghostlist))
+angle = np.zeros(len(ghostlist))
+tesnum = np.zeros(len(ghostlist))
+fitsdata1 = np.zeros((len(ghostlist),101,101))
+fitsdata2 = np.zeros((len(ghostlist),101,101))
 
-# for i, tes in enumerate(complist):
+for i, tes in enumerate(ghostlist):
 
-#     #do plot
-#     plt.figure(figsize=(10,10))
-#     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
-#             extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-#     plt.title("TES {}".format(tes))
-#     plt.xlabel("Azimuth [$^\circ$]")
-#     plt.ylabel("Elevation [$^\circ$]")
-#     #get peaks from plot
-#     var1, var2 = plt.ginput(2)
+    #do plot
+    plt.figure(figsize=(10,10))
+    plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
+            extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+    plt.title("TES {}".format(tes))
+    plt.xlabel("Azimuth [$^\circ$]")
+    plt.ylabel("Elevation [$^\circ$]")
+    #get peaks from plot
+    var1, var2 = plt.ginput(2)
     
-#     #set up fitting
-#     initial_guess1 = (max(flatmaps[i,:,:].ravel()), var1[0], var1[1], 1, 1, 0, 0)
-#     initial_guess2 = (max(flatmaps[i,:,:].ravel()), var2[0], var2[1], 1, 1, 0, 0)
-#     fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess1)
-#     fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess2)
-#     data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
-#     data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
-#     fit_errors1 = np.sqrt(np.diag(cov_mat1))
-#     fit_errors2 = np.sqrt(np.diag(cov_mat2))
+    #set up fitting
+    initial_guess1 = (max(flatmaps[i,:,:].ravel()), var1[0], var1[1], 1, 1, 0, 0)
+    initial_guess2 = (max(flatmaps[i,:,:].ravel()), var2[0], var2[1], 1, 1, 0, 0)
+    fit_params1, cov_mat1 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess1)
+    fit_params2, cov_mat2 = opt.curve_fit(twoD_Gaussian, (AZ, EL), flatmaps[i,:,:].ravel(), p0=initial_guess2)
+    data_fitted1 = twoD_Gaussian((AZ, EL), *fit_params1)
+    data_fitted2 = twoD_Gaussian((AZ, EL), *fit_params2)
+    fit_errors1 = np.sqrt(np.diag(cov_mat1))
+    fit_errors2 = np.sqrt(np.diag(cov_mat2))
     
-#     #calculate angle
-#     dx = fit_params2[1] - fit_params1[1]
-#     dy = fit_params2[2] - fit_params1[2]
-#     ang = np.rad2deg(math.atan2(dy, dx))
-#     #print(ang)
-#     #plot contour fits and text
-#     plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
-#     plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
-#     plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
-#     plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
-#     plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+    #calculate angle
+    dx = fit_params2[1] - fit_params1[1]
+    dy = fit_params2[2] - fit_params1[2]
+    ang = np.rad2deg(math.atan2(dy, dx))
+    #print(ang)
+    #plot contour fits and text
+    plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
+    plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
+    plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+    plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
+    plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
 
-#     #append arrays
-#     tesnum[i] = tes
-#     fit1x[i] = fit_params1[1]
-#     fit1y[i] = fit_params1[2]
-#     fit2x[i] = fit_params2[1]
-#     fit2y[i] = fit_params2[2]
-#     amp1[i] = fit_params1[0]
-#     amp2[i] = fit_params2[0]
-#     ampr[i] = fit_params1[0] / fit_params2[0]
-#     angle[i] = ang
-#     fitsdata1[i, :, :] = data_fitted1.reshape(101, 101)
-#     fitsdata2[i, :, :] = data_fitted2.reshape(101, 101)
+    #append arrays
+    tesnum[i] = tes
+    fit1x[i] = fit_params1[1]
+    fit1y[i] = fit_params1[2]
+    fit2x[i] = fit_params2[1]
+    fit2y[i] = fit_params2[2]
+    amp1[i] = fit_params1[0]
+    amp2[i] = fit_params2[0]
+    ampr[i] = fit_params1[0] / fit_params2[0]
+    angle[i] = ang
+    fitsdata1[i, :, :] = data_fitted1.reshape(101, 101)
+    fitsdata2[i, :, :] = data_fitted2.reshape(101, 101)
     
     
-#     #add relavant vars to arrays... once in the loop
-#     plt.savefig("/home/james/ghostimages/ghostfitsr2/ghostfits{}".format(tes), bbox_inches='tight')
-#     plt.pause(3)
-#     plt.close()
+    #add relavant vars to arrays... once in the loop
+    plt.savefig("/home/james/ghostimages/rerun/ghostfits{}".format(tes), bbox_inches='tight')
+    plt.pause(3)
+    plt.close()
 ```
 
 ```{python}
@@ -330,12 +325,12 @@ plt.close()
 ```{python}
 # datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle)).T
 # print(datmat.shape)
-# with open('objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+# with open('/home/james/ghostimages/rerun/objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
 #     pickle.dump(datmat, f)
 
 #Getting back the objects:
-with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
-    datmat = pickle.load(f)
+# with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
+#     datmat = pickle.load(f)
 
 #save fits data separately 
 # fitsmat = np.vstack((fitsdata1, fitsdata2))
@@ -344,7 +339,8 @@ with open('objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
 ```
 
 ```{python}
-
+print(datmat.shape)
+newarr = datmat.T
 ```
 
 ```{python}
@@ -555,22 +551,22 @@ plt.ylabel('Counts')
 """tesnums for plotting on FP here we want to correct the array so that asic 2 tesnums get subtracted by 124
 this does seem to make sense if you consider qubicpacks timeline data
 split into 2 asics"""
-carr = [ 22,  24,  27,  51,  58,  59,  74,  75,  76,  86,  93, 106, 107, 110,
-        120, 123, 134, 135, 138, 141, 166, 170, 171, 172, 201, 208, 213, 216,
-        218, 219]
+#carr = [ 22,  24,  27,  51,  58,  59,  74,  75,  76,  86,  93, 106, 107, 110,
+        #120, 123, 134, 135, 138, 141, 166, 170, 171, 172, 201, 208, 213, 216,
+        #218, 219]
 
 carra1 = np.array([])
 carra2 = np.array([])
 
-for i in range(len(carr)):
+for i in range(len(ghostlist)):
     
-    if carr[i] >=124:
-        carra2 = np.append(carra2, carr[i]-123)
+    if ghostlist[i] >=128:
+        carra2 = np.append(carra2, ghostlist[i]-127)
         
     else:
-        carra1 = np.append(carra1, carr[i])
+        carra1 = np.append(carra1, ghostlist[i])
         
-print(carr)
+print(ghostlist)
 print(carra1)
 print(carra2)
 ```
@@ -588,19 +584,51 @@ FPidentity = make_id_focalplane()
 #q3arr = np.array([])
 # for i in range(len(FPidentity.PIX)):
 #     #print(FPidentity[i].PIX)
-#     if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+#     if FPidentity[i].quadrant == 3:# and FPidentity[i].PIX >= 0:
+#         print(FPidentity[i])
 #         q3arr = np.append(q3arr, FPidentity[i].TES)
 # q3arr = np.flip(q3arr)
+for i in range(len(FPidentity.PIX)):
+    if FPidentity[i].quadrant == 3:
+        print(FPidentity[i])
+```
+
+```{python}
+names = 'index,row,col,quadrant,matrix,TES,PIX,ASIC'
+print(names)
+print(FPidentity.shape)
+cnt=0
+tpx = np.array([])
+tpy = np.array([])
+tasic = np.array([])
+ttes = np.array([])
+
+plt.figure(figsize=(14,14))
+plt.axis('equal')
+
+for i in range(len(FPidentity)):
+    if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0:
+        cenx = (vtxs[FPidentity[i].PIX-1,0,0] + vtxs[FPidentity[i].PIX-1,2,0]) / 2
+        ceny = (vtxs[FPidentity[i].PIX-1,0,1] + vtxs[FPidentity[i].PIX-1,2,1]) / 2
+        tpx = np.append(tpx, cenx)
+        tpy = np.append(tpy, ceny)
+        tasic = np.append(tasic, FPidentity[i].ASIC)
+        ttes = np.append(ttes, FPidentity[i].TES)
+        #print(FPidentity[i].ASIC, FPidentity[i].TES, FPidentity[i].PIX, cenx, ceny)
+        #do a plot in if loop
+        plt.plot(cenx, ceny, 's', color=current_palette[0])
+        plt.text(cenx-0.0001, ceny+0.00035,'TES{}'.format(int(FPidentity[i].TES)), fontsize=10)
+        
+        
+        cnt+=1
+print("count ", cnt)
+
+
 ```
 
 ```{python}
 """repeat above plot with test TES carr"""
 """PLOT"""
-font = {'family': 'serif',
-        'color':  'black',
-        'weight': 'bold',
-        'size': 14,
-        }
 plt.figure(figsize=(14,14))
 plt.axis('equal')
 
@@ -613,7 +641,7 @@ for i in range(len(FPidentity.PIX)):
         cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
         ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
         
-        #print(i, FPidentity[i].TES, FPidentity[i].ASIC, cenx, ceny)
+        print(i,j, FPidentity[i].PIX, FPidentity[i].TES, FPidentity[i].ASIC, cenx, ceny)
         
         plt.plot(cenx, ceny, 's', color=current_palette[0])
         #plt.text(cenx+0.00025, ceny+0.0003,'Pix{}'.format(j), fontsize=10)
@@ -632,8 +660,8 @@ for i in range(len(FPidentity.PIX)):
             plt.plot(cenx, ceny, 's', color=current_palette[2])
             
             px = np.append(px, cenx)
-            py = np.append(py, ceny)            
-        
+            py = np.append(py, ceny)
+            
         j -= 1
 
 for i in range(len(px)):
@@ -646,7 +674,99 @@ plt.ylabel('Y [m] FPRF')
 ```
 
 ```{python}
-print(newarr.shape)
+"""Looks like whatever i done in the previous cell works well. print output, work with it"""
+
+# """Find thermometer TES"""
+# #print((FPidentity.quadrant == 3 and FPidentity.PIX >= 0).all())
+
+# tpx = np.array([])
+# tpy = np.array([])
+# tpx2 = np.array([])
+# tpy2 = np.array([])
+# tasic = np.array([])
+# ttes = np.array([])
+
+# # plt.figure(figsize=(14,14))
+# # plt.axis('equal')
+# cnt = 0
+# cnt2 = 0
+# j=248
+# ii=0
+# #asic1
+# for i in range(len(FPidentity.PIX)):
+#     for ghost in carra1:
+#         if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0 and FPidentity[i].ASIC == 1 and FPidentity[i].TES == ghost:
+#             #print(FPidentity[i].ASIC, FPidentity[i].TES, ghost, cnt+1, j, cenx, ceny, FPidentity[i].PIX)
+#             cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
+#             ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
+#             tpx = np.append(tpx, cenx)
+#             tpy = np.append(tpy, ceny)
+#             tasic = np.append(tasic, FPidentity[i].ASIC)
+#             ttes = np.append(ttes, FPidentity[i].TES)
+#             cnt+=1
+#             j -= 1
+#             ii+=1
+# #asic2            
+# for i in range(len(FPidentity.PIX)):
+#     for ghost in carra2:
+#         if FPidentity[i].quadrant == 3 and FPidentity[i].PIX >= 0 and FPidentity[i].ASIC == 2 and FPidentity[i].TES == ghost:
+#             #print(FPidentity[i].ASIC, FPidentity[i].TES, ghost, cnt2+1, j, cenx, ceny, FPidentity[i].PIX, vtxs[FPidentity[-1*i+249].PIX,0,0])
+            
+#             cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
+#             ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
+            
+#             print(i, ii, j, FPidentity[j].PIX, FPidentity[ii].PIX,  cenx, ((vtxs[FPidentity[-1*ii+248].PIX-1,0,0] + vtxs[FPidentity[-1*ii+248].PIX-1,2,0]) / 2))
+#             tpx2 = np.append(tpx2, cenx)
+#             tpy2 = np.append(tpy2, ceny)
+#             tasic = np.append(tasic, FPidentity[i].ASIC)
+#             ttes = np.append(ttes, FPidentity[i].TES)
+#             cnt2+=1
+#             j -= 1
+#             ii+=1
+            
+# tpxa = np.append(tpx, tpx2)
+# print(cnt, "count1", cnt2, "count2")
+# print("len ghostlist", len(ghostlist), "len carra", len(carra1), len(carra2), len(carra1)+ len(carra2), 
+#       tpx.shape, tpx2.shape, tpxa.shape, ttes.shape)
+    
+```
+
+```{python}
+"""try one more time from coordinate basis"""
+# print(vtxs.shape)
+# #print(FPidentity.TES[np.where(FPidentity.quadrant == 3 & FPidentity.PIX >= 0)])
+# #print(vtxs)
+# counter=0
+# j=247
+# for i in range(len(vtxs[:,0,0])):
+#     cenx = (vtxs[j,0,0] + vtxs[j,2,0]) / 2
+#     ceny = (vtxs[j,0,1] + vtxs[j,2,1]) / 2
+#     if FPidentity[i].TES in carra2:
+#         counter+=1
+#         print(i, j, cenx, ceny, FPidentity[j].TES, counter)
+
+#     j-=1
+
+for i, ghost in enumerate(ghostlist):
+    if ghost <= 127:
+        condition = FPidentity.PIX[np.where((carr2[i] == FPidentity.TES) & 
+                                                       (FPidentity.quadrant == 3) & (FPidentity.ASIC == 1))]
+        cenx = (vtxs[condition-1,0,0] + vtxs[condition-1,2,0]) / 2
+        ceny = (vtxs[condition-1,0,1] + vtxs[condition-1,2,1]) / 2
+        print(i, ghost, carr2[i], "ASIC1", condition, cenx, ceny)
+        plt.plot(cenx, ceny, 's', color=current_palette[0])
+        
+    if ghost > 127:
+        condition = FPidentity.PIX[np.where((carr2[i] == FPidentity.TES) & (FPidentity.quadrant == 3) & (FPidentity.ASIC == 2))]
+          
+        cenx = (vtxs[condition-1,0,0] + vtxs[condition-1,2,0]) / 2
+        ceny = (vtxs[condition-1,0,1] + vtxs[condition-1,2,1]) / 2
+        print(i, ghost, carr2[i], "ASIC2", condition, cenx, ceny)  
+        plt.plot(cenx, ceny, 's', color=current_palette[3])
+```
+
+```{python}
+print(newarr.shape, vtxs.shape)
 #newarr = newarr.T
 print(newarr[:,0])
 header = ["TESnum", "xp1", "yp1", "xp2", "yp2", "amp1", "amp2", "ampr", "angle"]
@@ -661,7 +781,28 @@ print(carr2.shape)
 ```
 
 ```{python}
-# print(r.shape, newarr[8,:].shape)
+
+#this is the file saved from text created in the cell above. Its a rough and dirty file
+#header is like : i, FPidentity[i].PIX, FPidentity[i].TES, FPidentity[i].ASIC, cenx, ceny
+#indexfromFPidenityty, PIXnum, TESnum, ASIC, pixcenX, pixcenY
+# coordat = np.loadtxt('/home/james/ghostimages/rerun/coords_tes.txt').T
+# print(coordat.shape)
+# ra = np.array([])
+# x = np.array([])
+# y = np.array([])
+# for i, pix in enumerate(coordat[1,:]):   
+#     for ghost in carra2:
+#         if int(coordat[2,i]) == ghost:
+#             r = np.sqrt(coordat[4,i]**2 + coordat[5,i]**2)
+            
+#             ra = np.append(ra, r)
+#             x = np.append(x, coordat[4,i])
+#             y = np.append(y, coordat[5,i])
+#             print(i, pix, coordat[2,i], ghost, coordat[4,i], coordat[5,i], r)
+
+# print(ra.shape, x.shape, y.shape, len(ghostlist))
+
+# plt.plot(x, y, 'rs')
 ```
 
 ```{python}
