@@ -66,7 +66,7 @@ flatmaps = np.zeros([len(ghostlist), 101, 101])
 for i, tes in enumerate(ghostlist):
 
     flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
-    #flatmap = np.flip(flatmap)
+    flatmap = np.flip(flatmap)
     flatmaps[i, :, :] = flatmap
 
 plt.figure(figsize=(10,20))
@@ -84,9 +84,11 @@ testmap = flatmaps[2,:,:]
 plt.figure(figsize=(10,10))
 #plt.subplot(1,2,1)
 plt.scatter(AZ.ravel(), EL.ravel(), c=testmap.ravel())
-plt.xticks(np.arange(min(az), max(az), step=2))
-plt.yticks(np.arange(min(el), max(el), step=2))
+# plt.xticks(np.arange(min(az), max(az), step=2))
+# plt.yticks(np.arange(min(el), max(el), step=2))
 plt.grid(True)
+plt.xticks(np.arange(-20, 20, step=2))
+plt.yticks(np.arange(42, 65, step=2))
 # plt.subplot(1,2,2)
 # plt.imshow(flatmaps[2,:,:], aspect='equal')
 # plt.grid(True)
@@ -94,8 +96,8 @@ plt.grid(True)
 
 ```{python}
 # %matplotlib inline
-azval = 8
-elval = 45
+azval = 1
+elval = 57
 initial_guess = (max(testmap.ravel()), azval, elval, 1, 1, 0, 0)
 
 fit_params, cov_mat = opt.curve_fit(twoD_Gaussian, (AZ, EL), testmap.ravel(), p0=initial_guess)
@@ -325,12 +327,12 @@ for i, tes in enumerate(ghostlist):
 ```{python}
 # datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle)).T
 # print(datmat.shape)
-# with open('/home/james/ghostimages/rerun/objs.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+# with open('/home/james/ghostimages/rerun/objs_rerun2.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
 #     pickle.dump(datmat, f)
 
 #Getting back the objects:
-with open('/home/james/ghostimages/rerun/objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
-    datmat = pickle.load(f)
+# with open('/home/james/ghostimages/rerun/objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
+#     datmat = pickle.load(f)
 
 #save fits data separately 
 # fitsmat = np.vstack((fitsdata1, fitsdata2))
@@ -339,24 +341,26 @@ with open('/home/james/ghostimages/rerun/objs.pkl',  'rb') as f:  # Python 3: op
 ```
 
 ```{python}
-print(datmat.shape)
+
 newarr = datmat.T
+print(datmat.shape, newarr.shape)
 ```
 
 ```{python}
+"""all looking good for rerun 2"""
 #should remove 16, 57?, 181?, 210 to leave only good fits
-badlist = [16, 57, 181, 210]
-newarr = np.array([])
-print(datmat[2,:].shape)
+# badlist = [16, 57, 181, 210]
+# newarr = np.array([])
+# print(datmat[2,:].shape)
 
-for i, tes in enumerate(datmat[:,0]):
-    #print(i, tes)
-    if tes not in badlist:
-        newarr = np.hstack((newarr, datmat[i,:]))
+# for i, tes in enumerate(datmat[:,0]):
+#     #print(i, tes)
+#     if tes not in badlist:
+#         newarr = np.hstack((newarr, datmat[i,:]))
         
-newarr = np.reshape(newarr, (30,9)).T
+# newarr = np.reshape(newarr, (30,9)).T
         
-print(newarr.shape, newarr[:, 0])
+# print(newarr.shape, newarr[:, 0])
 ```
 
 ```{python}
@@ -569,6 +573,11 @@ for i in range(len(ghostlist)):
 print(ghostlist)
 print(carra1)
 print(carra2)
+
+#append carra arrays to give a ghostlist with correct TES indexing
+carr2 = np.append(carra1, carra2)
+print(carr2)
+print(carr2.shape)
 ```
 
 ```{python}
@@ -629,6 +638,7 @@ print("count ", cnt)
 ```{python}
 """repeat above plot with test TES carr"""
 """PLOT"""
+# %matplotlib inline
 plt.figure(figsize=(14,14))
 plt.axis('equal')
 
@@ -641,7 +651,7 @@ for i in range(len(FPidentity.PIX)):
         cenx = (vtxs[j-1,0,0] + vtxs[j-1,2,0]) / 2
         ceny = (vtxs[j-1,0,1] + vtxs[j-1,2,1]) / 2
         
-        print(i,j, FPidentity[i].PIX, FPidentity[i].TES, FPidentity[i].ASIC, cenx, ceny)
+        #print(i,j, FPidentity[i].PIX, FPidentity[i].TES, FPidentity[i].ASIC, cenx, ceny)
         
         plt.plot(cenx, ceny, 's', color=current_palette[0])
         #plt.text(cenx+0.00025, ceny+0.0003,'Pix{}'.format(j), fontsize=10)
@@ -674,7 +684,8 @@ plt.ylabel('Y [m] FPRF')
 ```
 
 ```{python}
-"""Looks like whatever i done in the previous cell works well. print output, work with it"""
+"""Looks like whatever i done in the previous cell works well. print output, work with it \n
+scrath that, had a good solution later"""
 
 # """Find thermometer TES"""
 # #print((FPidentity.quadrant == 3 and FPidentity.PIX >= 0).all())
@@ -732,6 +743,10 @@ plt.ylabel('Y [m] FPRF')
 ```
 
 ```{python}
+
+```
+
+```{python}
 """try one more time from coordinate basis"""
 # print(vtxs.shape)
 # #print(FPidentity.TES[np.where(FPidentity.quadrant == 3 & FPidentity.PIX >= 0)])
@@ -749,10 +764,21 @@ plt.ylabel('Y [m] FPRF')
 plt.figure(figsize=(14,14))
 plt.axis('equal')
 
+#initialise arrays to append based on tesnum algorithim
+ttes = np.array([])
+xp1 = np.array([])
+yp1 = np.array([])
+xp2 = np.array([])
+yp2 = np.array([])
+amp1 = np.array([])
+amp2 = np.array([])
+ampr = np.array([])
+angle = np.array([])
 tpx = np.array([])
 tpy = np.array([])
 
 for i, ghost in enumerate(ghostlist):
+    #asic 1 condition
     if ghost <= 127:
         condition = FPidentity.PIX[np.where((carr2[i] == FPidentity.TES) & 
                                                        (FPidentity.quadrant == 3) & (FPidentity.ASIC == 1))]
@@ -760,9 +786,23 @@ for i, ghost in enumerate(ghostlist):
         ceny = (vtxs[condition-1,0,1] + vtxs[condition-1,2,1]) / 2
         tpx = np.append(tpx, cenx)
         tpy = np.append(tpy, ceny)
-        #print(i, ghost, carr2[i], "ASIC1", condition, cenx, ceny)
-        plt.plot(cenx, ceny, 's', color=current_palette[1])
+        print(i, ghost, carr2[i], "ASIC1", condition, cenx, ceny)
+        #plt.plot(cenx, ceny, 's', color=current_palette[1])
         
+        #if condition returns 0, its not a valid tes
+        if condition > 0:
+            ttes = np.append(ttes, newarr[0,i])
+            xp1 = np.append(xp1, newarr[1,i])
+            yp1 = np.append(yp1, newarr[2,i])
+            xp2 = np.append(xp2, newarr[3,i])
+            yp2 = np.append(yp2, newarr[4,i])
+            amp1 = np.append(amp1, newarr[5,i])
+            amp2 = np.append(amp2, newarr[6,i])
+            ampr = np.append(ampr, newarr[7,i])
+            angle = np.append(angle, newarr[8,i])
+
+        
+    #asic2 condition    
     if ghost > 127:
         condition = FPidentity.PIX[np.where((carr2[i] == FPidentity.TES) & (FPidentity.quadrant == 3) & (FPidentity.ASIC == 2))]
           
@@ -771,9 +811,22 @@ for i, ghost in enumerate(ghostlist):
         tpx = np.append(tpx, cenx)
         tpy = np.append(tpy, ceny)
         #print(i, ghost, carr2[i], "ASIC2", condition, cenx, ceny)  
-        plt.plot(cenx, ceny, 's', color=current_palette[2])
+        #plt.plot(cenx, ceny, 's', color=current_palette[2])
+        
+        #if condition returns 0, its not a valid tes
+        if condition > 0:
+            ttes = np.append(ttes, newarr[0,i])
+            xp1 = np.append(xp1, newarr[1,i])
+            yp1 = np.append(yp1, newarr[2,i])
+            xp2 = np.append(xp2, newarr[3,i])
+            yp2 = np.append(yp2, newarr[4,i])
+            amp1 = np.append(amp1, newarr[5,i])
+            amp2 = np.append(amp2, newarr[6,i])
+            ampr = np.append(ampr, newarr[7,i])
+            angle = np.append(angle, newarr[8,i])
+        
 print("newarr header", header)
-print(len(ghostlist), tpx.shape, newarr.shape)
+print(len(ghostlist), tpx.shape, newarr.shape, ttes.shape)
 ```
 
 ```{python}
@@ -786,9 +839,7 @@ print(px.shape)
 ```
 
 ```{python}
-carr2 = np.append(carra1, carra2)
-print(carr2)
-print(carr2.shape)
+
 ```
 
 ```{python}
@@ -826,11 +877,11 @@ font = {'family' : 'normal',
 plt.rc('font', **font)
 current_palette = sns.color_palette('muted')
 
-r = np.sqrt(px**2 + py**2)
-slope, intercept, r_value, p_value, std_err = stats.linregress(r, newarr[8,:])
+r = np.sqrt(tpx**2 + tpy**2)
+slope, intercept, r_value, p_value, std_err = stats.linregress(r, angle)
 abline_values = [slope * i + intercept for i in r]
 plt.figure(figsize=(16,8))
-plt.plot(r, newarr[8,:], '.', color=current_palette[0], markersize=20)
+plt.plot(r, angle, '.', color=current_palette[0], markersize=20)
 plt.plot(r, abline_values, color=current_palette[0], lw=5,
          label='$r^2$ = {:3.4f} \nslope = {:3.4f} \nstd_err = {:3.4f}'.format(r_value**2, slope, std_err))
 plt.xlabel('Radius [m]')
@@ -845,12 +896,12 @@ plt.legend()
 plt.rc('font', **font)
 current_palette = sns.color_palette('muted')
 
-r = np.sqrt(px**2 + py**2)
-slope, intercept, r_value, p_value, std_err = stats.linregress(r, newarr[7,:])
+#r = np.sqrt(px**2 + py**2)
+slope, intercept, r_value, p_value, std_err = stats.linregress(r, ampr)
 abline_values = [slope * i + intercept for i in r]
 
 plt.figure(figsize=(16,8))
-plt.plot(r, newarr[7,:], '.', color=current_palette[3], markersize=20)
+plt.plot(r, ampr, '.', color=current_palette[3], markersize=20)
 plt.plot(r, abline_values, color=current_palette[3], lw=5,
          label='$r^2$ = {:3.4f} \nslope = {:3.4f} \nstd_err = {:3.4f}'.format(r_value**2, slope, std_err))
 plt.xlabel('Radius [m]')
@@ -1205,36 +1256,40 @@ for i in range(len(px)):
     #here we check asic number and if tes is a ghost tes
     #and if that ghost tes is in column of the squidasic
     #then we add to array if ghosted as 1, else 0
+#     print(asica[i], tesa[i], cola[i], squida[i])
+    
     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 1:
-        colar21[int(squida[i])] = 1
+        colar21[int(squida[i])-1] = 1
 
     #do column2 asic 2
     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 2:
-        colar22[int(squida[i])] = 1      
+        colar22[int(squida[i])-1] = 1      
 
     #do column3 asic 2
     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 3:
-        colar23[int(squida[i])] = 1       
+        colar23[int(squida[i])-1] = 1       
 
     #do column4 asic 2
     if asica[i] == 2 and tesa[i] in carra2 and cola[i] == 4:
-        colar24[int(squida[i])] = 1      
+        colar24[int(squida[i])-1] = 1      
 
 #now do the same for asic1
     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 1:
-        colar11[int(squida[i])] = 1
+        colar11[int(squida[i])-1] = 1
 
-    #do column2 asic 2
+    #do column2 asic 1
     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 2:
-        colar12[int(squida[i])] = 1      
+        colar12[int(squida[i])-1] = 1
+        #try pull the tesnums
+        print(asica[i], tesa[i], cola[i], squida[i])
 
-    #do column3 asic 2
+    #do column3 asic 1
     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 3:
-        colar13[int(squida[i])] = 1        
+        colar13[int(squida[i])-1] = 1        
 
-    #do column4 asic 2
+    #do column4 asic 1
     if asica[i] == 1 and tesa[i] in carra1 and cola[i] == 4:
-        colar14[int(squida[i])] = 1       
+        colar14[int(squida[i])-1] = 1       
       
 
 ```
@@ -1338,6 +1393,48 @@ plt.legend()
 """Still need to test tes beside each other on squid. of the ghost on sqd24 is the same image as on sqd23 or sqd25
 This is really important, seems most likely and this is actually what i intended to do originally but got side tracked along the way
 albiet, necessarily so"""
+```
+
+```{python}
+#for asic1
+plt.figure(figsize=(16,12))
+plt.subplot(4,1,1)
+plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1 COL1")
+plt.ylabel("ASIC1 COL1")
+plt.yticks([0,1])
+plt.subplot(4,1,2)
+plt.bar(r, colar12, color=current_palette[1], edgecolor='white', width=width, label="ASIC1 COL2")
+plt.ylabel("ASIC1 COL2")
+plt.yticks([0,1])
+plt.subplot(4,1,3)
+plt.bar(r, colar13, color=current_palette[2], edgecolor='white', width=width, label="ASIC1 COL3")
+plt.ylabel("ASIC1 COL3")
+plt.yticks([0,1])
+plt.subplot(4,1,4)
+plt.bar(r, colar14, color=current_palette[3], edgecolor='white', width=width, label="ASIC1 COL4")
+plt.ylabel("ASIC1 COL4")
+plt.xlabel("Column Number")
+plt.yticks([0,1])
+
+#for asic2
+plt.figure(figsize=(16,12))
+plt.subplot(4,1,1)
+plt.bar(r, colar21, color=current_palette[0], edgecolor='white', width=width, label="ASIC1 COL1")
+plt.ylabel("ASIC2 COL1")
+plt.yticks([0,1])
+plt.subplot(4,1,2)
+plt.bar(r, colar22, color=current_palette[1], edgecolor='white', width=width, label="ASIC1 COL2")
+plt.ylabel("ASIC2 COL2")
+plt.yticks([0,1])
+plt.subplot(4,1,3)
+plt.bar(r, colar23, color=current_palette[2], edgecolor='white', width=width, label="ASIC1 COL3")
+plt.ylabel("ASIC2 COL3")
+plt.yticks([0,1])
+plt.subplot(4,1,4)
+plt.bar(r, colar24, color=current_palette[3], edgecolor='white', width=width, label="ASIC1 COL4")
+plt.ylabel("ASIC2 COL4")
+plt.xlabel("Column Number")
+plt.yticks([0,1])
 ```
 
 ```{python}
