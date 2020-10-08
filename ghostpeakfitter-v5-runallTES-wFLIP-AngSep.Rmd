@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import griddata
 import qubic.fibtools as ft
+import scipy
 import scipy.optimize as opt
 import numpy as np
 import math
@@ -131,7 +132,7 @@ plt.xlabel("Azimuth [$^\circ$]")
 plt.ylabel("Elevation [$^\circ$]")
 #get peaks from plot
 var1, var2 = plt.ginput(2)
-print(var1[0], var1[1])
+print(var1[0], var1[1], var2[0], var2[1])
 
 #set up fitting
 initial_guess1 = (max(testmap.ravel()), var1[0], var1[1], 1, 1, 0, 0)
@@ -147,7 +148,9 @@ fit_errors2 = np.sqrt(np.diag(cov_mat2))
 dx = fit_params2[1] - fit_params1[1]
 dy = fit_params2[2] - fit_params1[2]
 ang = np.rad2deg(math.atan2(dy, dx))
-print(ang)
+angsep = np.sqrt(dx**2 + dy**2)
+#angsep2 = dy/np.sin(np.deg2rad(ang))
+print(ang, dx, dy, angsep, angsep2)
 
 #plot contour fits and text do second plot
 #plt.subplots(121)
@@ -160,7 +163,8 @@ plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k', label='Peak 1
 plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
 plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
 plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
-plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+plt.text(fit_params1[1], fit_params1[2]-2, "Angular Tilt {:03.2f}".format(ang, prec=2), {'color': 'y', 'fontsize': 12})
+plt.text(fit_params1[1], fit_params1[2]-3, "Angular Separation {:03.2f}".format(angsep, prec=2), {'color': 'c', 'fontsize': 12})
 
 #add relavant vars to arrays... once in the loop
 #plt.savefig("/home/james/ghostimages/ghostfits/ghostfits{}".format(tes))
@@ -186,6 +190,7 @@ amp1 = np.zeros(len(ghostlist))
 amp2 = np.zeros(len(ghostlist))
 ampr = np.zeros(len(ghostlist))
 angle = np.zeros(len(ghostlist))
+anglesep = np.zeros(len(ghostlist))
 tesnum = np.zeros(len(ghostlist))
 fitsdata1 = np.zeros((len(ghostlist),101,101))
 fitsdata2 = np.zeros((len(ghostlist),101,101))
@@ -216,13 +221,15 @@ for i, tes in enumerate(ghostlist):
     dx = fit_params2[1] - fit_params1[1]
     dy = fit_params2[2] - fit_params1[2]
     ang = np.rad2deg(math.atan2(dy, dx))
+    angsep = np.sqrt(dx**2 + dy**2)
     #print(ang)
     #plot contour fits and text
     plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
     plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
     plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
     plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
-    plt.text(fit_params1[1], fit_params1[2]-2, "Angle {:03.2f}".format(ang, prec=2), {'color': 'b', 'fontsize': 12})
+    plt.text(fit_params1[1], fit_params1[2]-2, "Angular Tilt {:03.2f}".format(ang, prec=2), {'color': 'y', 'fontsize': 12})
+    plt.text(fit_params1[1], fit_params1[2]-3, "Angular Separation {:03.2f}".format(angsep, prec=2), {'color': 'c', 'fontsize': 12})
 
     #append arrays
     tesnum[i] = tes
@@ -234,12 +241,13 @@ for i, tes in enumerate(ghostlist):
     amp2[i] = fit_params2[0]
     ampr[i] = fit_params1[0] / fit_params2[0]
     angle[i] = ang
+    anglesep[i] = angsep
     fitsdata1[i, :, :] = data_fitted1.reshape(101, 101)
     fitsdata2[i, :, :] = data_fitted2.reshape(101, 101)
     
     
     #add relavant vars to arrays... once in the loop
-    plt.savefig("/home/james/ghostimages/rerun/ghostfits{}".format(tes), bbox_inches='tight')
+    plt.savefig("/home/james/ghostimages/rerunv5/ghostfits{}".format(tes), bbox_inches='tight')
     plt.pause(3)
     plt.close()
 ```
@@ -325,10 +333,10 @@ for i, tes in enumerate(ghostlist):
 ```
 
 ```{python}
-# datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle)).T
-# print(datmat.shape)
-# with open('/home/james/ghostimages/rerun/objs_rerun2.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
-#     pickle.dump(datmat, f)
+datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle, anglesep)).T
+print(datmat.shape)
+with open('/home/james/ghostimages/rerunv5/objs_rerunv5.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+    pickle.dump(datmat, f)
 
 #Getting back the objects:
 # with open('/home/james/ghostimages/rerun/objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
@@ -372,7 +380,7 @@ header = ["TESnum", "xp1", "yp1", "xp2", "yp2", "amp1", "amp2", "ampr", "angle"]
 #print(header)
 #print(newarr.shape)
 #newarr = newarr.T
-
+# %matplotlib inline
 font = {'family' : 'normal',
         'weight' : 'normal',
         'size'   : 22}
@@ -381,21 +389,54 @@ plt.rc('font', **font)
 current_palette = sns.color_palette('muted')
 #sns.palplot(current_palette)
 #calc average
+# [m, b], cov = np.polyfit(newarr[0], newarr[8], 1, cov=True,full=False)
+# print(m.shape, b.shape, m, b)
+# print(np.sqrt(np.diag(cov)))
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(newarr[0], newarr[8])
 avg = np.mean(newarr[8])
 
 plt.figure(figsize=(16,8))
 plt.xlabel("TES Number")
-plt.ylabel("Angle [$^\circ$]")
+plt.ylabel("Tilt Angle [$^\circ$]")
 plt.plot(newarr[0], np.ones(len(newarr[8]))*np.mean(newarr[8]),
-         '--', color=current_palette[0], lw=5, markersize=12, label='Mean Angle {:3.2f}$^\circ$'.format(avg))
-plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Angle')
+         '-', color=current_palette[0], markersize=12, label='Mean Angle {:3.2f}$^\circ$'.format(avg))
+plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Tilt Angle')
+plt.plot(newarr[0], slope*newarr[0] + intercept, '--', lw=5, color=current_palette[0], 
+         markersize=20, label=r'$r^2 = {:03.2f}$'.format(r_value**2, prec=2))
+
 plt.legend(loc='upper left')
 
-#plt.savefig("/home/james/ghostimages/plots/angles", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/tiltangles", bbox_inches='tight')
 ```
 
 ```{python}
-"""version 2 with standard deviation"""
+"""do same plot for angular separation"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(newarr[0], newarr[9])
+avg = np.mean(newarr[9])
+
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Separation Angle [$^\circ$]")
+plt.plot(newarr[0], np.ones(len(newarr[9]))*np.mean(newarr[9]),
+         '-', color=current_palette[1], markersize=12, label='Mean Angle {:3.2f}$^\circ$'.format(avg))
+plt.plot(newarr[0], newarr[9], '.', color=current_palette[1], markersize=20, label='Ghost Separation Angle')
+plt.plot(newarr[0], slope*newarr[0] + intercept, '--', lw=5, color=current_palette[1], 
+         markersize=20, label=r'$r^2 = {:03.5}$'.format(r_value**2, prec=5))
+
+plt.legend(loc='lower left')
+
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/sepangles", bbox_inches='tight')
+```
+
+```{python}
+"""THIS IS PLOT IS NOT SO HELPFUL... version 2 with standard deviation"""
 font = {'family' : 'normal',
         'weight' : 'normal',
         'size'   : 22}
@@ -431,7 +472,7 @@ plt.legend(loc='upper left')
 ```
 
 ```{python}
-"""do histogram"""
+"""do histogramS"""
 font = {'family' : 'normal',
         'weight' : 'normal',
         'size'   : 22}
@@ -441,10 +482,16 @@ current_palette = sns.color_palette('muted')
 
 plt.figure(figsize=(16,8))
 n, bins, patches = plt.hist(newarr[8], bins='auto', facecolor=current_palette[0],rwidth=0.95)
-plt.xlabel('Angle [$^\circ$]')
+plt.xlabel('Tilt Angle [$^\circ$]')
 plt.ylabel('Counts')
 
-#plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/tilthist", bbox_inches='tight')
+
+plt.figure(figsize=(16,8))
+n, bins, patches = plt.hist(newarr[9], bins='auto', facecolor=current_palette[1],rwidth=0.95)
+plt.xlabel('Separation Angle [$^\circ$]')
+plt.ylabel('Counts')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/sephist", bbox_inches='tight')
 ```
 
 ```{python}
@@ -495,7 +542,7 @@ plt.plot(newarr[0], newarr[6], '.', color=current_palette[2], markersize=20, lab
 plt.ylabel("Peak Amplitude")
 plt.legend(loc='upper center')
 
-#plt.savefig("/home/james/ghostimages/plots/amplitudes", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/amplitudes", bbox_inches='tight')
 ```
 
 ```{python}
@@ -514,7 +561,7 @@ plt.ylabel("Peak Amplitude Ratio")
 plt.plot(newarr[0], newarr[7], '.', color=current_palette[3], lw=4, markersize=20, label='Amplitude Ratio')
 #plot avg
 plt.plot(newarr[0], np.ones(len(newarr[7]))*avg, 
-         '--', color=current_palette[1], lw=5, markersize=12, label='Mean {:3.2f}$^\circ$'.format(avg))
+         '--', color=current_palette[1], lw=5, markersize=12, label='Mean Ratio = {:3.2f}$^\circ$'.format(avg))
 #try plot stdv
 plt.plot(newarr[0], np.ones(len(newarr[7]))*sdp1, 
          '--', color=current_palette[2], lw=5, markersize=12, label='\u03C3 = {:3.2f}$^\circ$'.format(npsd))
@@ -523,7 +570,7 @@ plt.plot(newarr[0], np.ones(len(newarr[7]))*sdp2,
 plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
 
 plt.legend(loc=(0.07, 0.75))
-#plt.savefig("/home/james/ghostimages/plots/amplitudesSDEV", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/amplitudesSDEV", bbox_inches='tight')
 ```
 
 ```{python}
@@ -545,7 +592,7 @@ n, bins, patches = plt.hist(newarr[7], bins='auto', facecolor=current_palette[3]
 plt.xlabel('Amplitude Ratio')
 plt.ylabel('Counts')
 
-#plt.savefig("/home/james/ghostimages/plots/hist", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/hist", bbox_inches='tight')
 ```
 
 ```{python}
@@ -774,6 +821,7 @@ amp1 = np.array([])
 amp2 = np.array([])
 ampr = np.array([])
 angle = np.array([])
+anglesep = np.array([])
 tpx = np.array([])
 tpy = np.array([])
 
@@ -800,6 +848,7 @@ for i, ghost in enumerate(ghostlist):
             amp2 = np.append(amp2, newarr[6,i])
             ampr = np.append(ampr, newarr[7,i])
             angle = np.append(angle, newarr[8,i])
+            anglesep = np.append(anglesep, newarr[9,i])
 
         
     #asic2 condition    
@@ -824,6 +873,7 @@ for i, ghost in enumerate(ghostlist):
             amp2 = np.append(amp2, newarr[6,i])
             ampr = np.append(ampr, newarr[7,i])
             angle = np.append(angle, newarr[8,i])
+            anglesep = np.append(anglesep, newarr[9,i])
         
 print("newarr header", header)
 print(len(ghostlist), tpx.shape, newarr.shape, ttes.shape)
@@ -881,13 +931,25 @@ r = np.sqrt(tpx**2 + tpy**2)
 slope, intercept, r_value, p_value, std_err = stats.linregress(r, angle)
 abline_values = [slope * i + intercept for i in r]
 plt.figure(figsize=(16,8))
-plt.plot(r, angle, '.', color=current_palette[0], markersize=20)
+plt.plot(r, angle, '.', color=current_palette[0], markersize=20, label='Tilt Angle')
 plt.plot(r, abline_values, color=current_palette[0], lw=5,
-         label='$r^2$ = {:3.4f} \nslope = {:3.4f} \nstd_err = {:3.4f}'.format(r_value**2, slope, std_err))
+         label='$r^2$ = {:3.4f}'.format(r_value**2))
 plt.xlabel('Radius [m]')
-plt.ylabel("Angle [$^\circ$]")
+plt.ylabel("Tilt Angle [$^\circ$]")
 plt.legend()
-#plt.savefig("/home/james/ghostimages/plots/randanglev2", bbox_inches='tight')
+plt.savefig("/home/james/ghostimages/rerunv5/plots/randanglev2", bbox_inches='tight')
+
+#now do for sep angle
+slope, intercept, r_value, p_value, std_err = stats.linregress(r, anglesep)
+abline_values = [slope * i + intercept for i in r]
+plt.figure(figsize=(16,8))
+plt.plot(r, anglesep, '.', color=current_palette[1], markersize=20, label='Separation Angle')
+plt.plot(r, abline_values, color=current_palette[1], lw=5,
+         label='$r^2$ = {:3.4f}'.format(r_value**2))
+plt.xlabel('Radius [m]')
+plt.ylabel("Separation Angle [$^\circ$]")
+plt.legend()
+plt.savefig("/home/james/ghostimages/rerunv5/plots/sepanglev2", bbox_inches='tight')
 ```
 
 ```{python}
@@ -901,13 +963,13 @@ slope, intercept, r_value, p_value, std_err = stats.linregress(r, ampr)
 abline_values = [slope * i + intercept for i in r]
 
 plt.figure(figsize=(16,8))
-plt.plot(r, ampr, '.', color=current_palette[3], markersize=20)
+plt.plot(r, ampr, '.', color=current_palette[3], markersize=20, label="Amplitude Ratio")
 plt.plot(r, abline_values, color=current_palette[3], lw=5,
-         label='$r^2$ = {:3.4f} \nslope = {:3.4f} \nstd_err = {:3.4f}'.format(r_value**2, slope, std_err))
+         label='$r^2$ = {:3.4f}'.format(r_value**2))
 plt.xlabel('Radius [m]')
 plt.ylabel("Amplitude Ratio")
 plt.legend()
-#plt.savefig("/home/james/ghostimages/plots/randamprv2", bbox_inches='tight')
+plt.savefig("/home/james/ghostimages/rerunv5/plots/randamprv2", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1059,6 +1121,8 @@ font = {'family': 'serif',
 plt.rcParams['axes.facecolor'] = 'honeydew'
 plt.figure(figsize=(14,14))
 plt.axis('equal')
+plt.xlabel("Focal Plane X [m]")
+plt.ylabel("Focal Plane Y [m]")
 
 
 for i in range(len(px)):
@@ -1089,7 +1153,7 @@ for i in range(len(px)):
     if asica[i] == 2 and tesa[i] in carra2:
         plt.plot(px[i], py[i], 'D', color='orangered', markersize=10, fillstyle='none', mew=3)
         
-
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/FP", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1157,11 +1221,22 @@ for i in range(len(px)):
         sqa = np.append(sqa, squida[i])
 print(sqa.shape, len(np.unique(sqa)))
 #plt.plot(np.linspace(1, len(col1), len(col1)), sqa, '.')
+
+
 plt.figure(figsize=(16,8))
 plt.plot(sqa, '.')
 plt.figure(figsize=(16,8))
 plt.hist(sqa, bins=np.linspace(1, len(col1), len(col1)), facecolor=current_palette[0],rwidth=0.95)
 plt.xlabel('Squid Columns (ASIC1&2)')
+```
+
+```{python}
+
+plt.figure(figsize=(16,8))
+plt.hist(sqa, bins=np.linspace(1, len(col1), len(col1)), facecolor=current_palette[0],rwidth=0.95)
+plt.xlabel('SQUID Columns (ASIC1&2)')
+plt.ylabel('Counts')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/a1&2", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1328,6 +1403,11 @@ plt.bar(r, colar23, color=current_palette[6], edgecolor='white', width=width, bo
 plt.bar(r, colar24, color=current_palette[7], edgecolor='white', width=width, bottom=colar11+colar12+colar13
         +colar14+colar21+colar23, label="ASIC2 COL4")
 plt.legend()
+
+plt.xlabel('SQUID Columns')
+plt.ylabel('Counts')
+
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/pereachcolumn", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1337,21 +1417,23 @@ r = np.linspace(1, len(colar21), len(colar21))
 width=1
 plt.figure(figsize=(16,8))
 plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1")
-plt.bar(r, colar12, color=current_palette[0], edgecolor='white', width=width, bottom=colar11, 
-        label="ASIC1")
-plt.bar(r, colar13, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12,
-       label="ASIC1")
-plt.bar(r, colar14, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12+colar13,
-       label="ASIC1")
+plt.bar(r, colar12, color=current_palette[0], edgecolor='white', width=width, bottom=colar11)
+plt.bar(r, colar13, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12)
+plt.bar(r, colar14, color=current_palette[0], edgecolor='white', width=width, bottom=colar11+colar12+colar13)
 plt.bar(r, colar21, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
         +colar14, label="ASIC2")
 plt.bar(r, colar22, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
-        +colar14+colar21, label="ASIC2")
+        +colar14+colar21)
 plt.bar(r, colar23, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
-        +colar14+colar21+colar22, label="ASIC2")
+        +colar14+colar21+colar22)
 plt.bar(r, colar24, color=current_palette[1], edgecolor='white', width=width, bottom=colar11+colar12+colar13
-        +colar14+colar21+colar23, label="ASIC2")
+        +colar14+colar21+colar23)
 plt.legend()
+
+plt.xlabel('SQUID Columns')
+plt.ylabel('Counts')
+
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/eachasic", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1376,6 +1458,10 @@ plt.bar(r, colar23, color=current_palette[2], edgecolor='white', width=width, bo
 plt.bar(r, colar24, color=current_palette[3], edgecolor='white', width=width, bottom=colar11+colar12+colar13
         +colar14+colar21+colar23, label="ASIC2 COL4")
 plt.legend()
+plt.xlabel('SQUID Columns')
+plt.ylabel('Counts')
+
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/simcols", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1416,6 +1502,8 @@ plt.ylabel("ASIC1 COL4")
 plt.xlabel("Column Number")
 plt.yticks([0,1])
 
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/ghostinstances1", bbox_inches='tight')
+
 #for asic2
 plt.figure(figsize=(16,10))
 plt.subplot(4,1,1)
@@ -1435,6 +1523,8 @@ plt.bar(r, colar24, color=current_palette[3], edgecolor='white', width=width, la
 plt.ylabel("ASIC2 COL4")
 plt.xlabel("Column Number")
 plt.yticks([0,1])
+
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/ghostinstances2", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1455,6 +1545,8 @@ plt.subplot(2,1,2)
 plt.bar(rcols, asic2cols, color=current_palette[1], edgecolor='white', width=width, label="ASIC1 COL1")
 plt.ylabel("ASIC2 Columns")
 plt.yticks([0,1])
+
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/ghostsperasic", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1532,14 +1624,19 @@ print(flatmaps.shape)
 ```
 
 ```{python}
-plt.figure(figsize=(16,8))
-
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 10}
+plt.figure(figsize=(18,7))
 
 for i, tes in enumerate(testlist):
     plt.subplot(2,5,i+1)
     plt.imshow(flatmaps[i,:,:], aspect='equal', origin='lower',
         extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
     plt.title("TES{}".format(tes))
+    
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/blocktest", bbox_inches='tight')   
+
 ```
 
 ```{python}
