@@ -1,0 +1,199 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import qubic.sb_fitting as sbfit
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+import qubic.fibtools as ft
+import scipy.optimize as opt
+import numpy as np
+import math
+import pickle
+import seaborn as sns
+
+def twoD_Gaussian(xdatatuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    x, y = xdatatuple
+    xo = float(xo)
+    yo = float(yo)    
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    g = offset + amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))
+    return g.ravel()
+```
+
+```{python}
+""""""
+"""load 6 2020-01-14 flatmaps
+indeed we can see there are ghosts"""
+
+dirfile = '/home/james/synthbeamdata/2020-01-14'
+c50 = np.cos(np.radians(50))
+azmin = -20./c50
+azmax = 20./c50
+maplist = np.linspace(1,256,256, dtype='int')
+flatmaps = np.zeros([len(maplist), 101, 101])
+
+for i, tes in enumerate(maplist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    flatmap = np.flip(flatmap)
+    flatmaps[i, :, :] = flatmap
+
+plt.figure(figsize=(10,20))
+plt.imshow(flatmaps[254,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
+plt.xticks(np.arange(-12, 12, step=1))
+plt.yticks(np.arange(45, 65, step=1))
+plt.grid(True)
+
+```
+
+```{python}
+print(len(flatmaps))
+```
+
+```{python}
+"""make nice pdf like JC"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 10}
+
+plt.rc('figure',figsize=(18,7))
+nnx = 5
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+elmin = min(el)
+elmax = max(el)
+azmin = min(az)
+azmax = max(az)
+
+
+for k in range(nplots):
+    plt.figure()
+    for i in range(nnx*nny):
+        ites = i+k*nnx*nny
+        if ites < 256:
+            plt.subplot(nny,nnx,i+1)
+            mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+            plt.imshow(flatmaps[ites,:,:], aspect='equal',
+                   extent=[azmin, azmax, elmin, elmax],
+                   vmin=mm-ss, vmax=mm+30*ss)
+            plt.title('TES {}'.format(ites+1))
+            #plt.savefig('jj{}.png'.format(k))
+    #plt.tight_layout()
+    plt.show()
+```
+
+```{python}
+"""make nice pdf like JC"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 20}
+
+plt.rc('figure',figsize=(18,6))
+nnx = 5
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+elmin = min(el)
+elmax = max(el)
+azmin = min(az)
+azmax = max(az)
+
+
+for k in range(nplots):
+    plt.figure()
+    for i in range(nnx*nny):
+        ites = i+k*nnx*nny
+        if ites < 256:
+            plt.subplot(nny,nnx,i+1)
+            mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+            plt.imshow(flatmaps[ites,:,:], aspect='equal',
+                   extent=[azmin, azmax, elmin, elmax])
+            plt.title('TES {}'.format(ites+1), fontdict=font)
+            plt.savefig('/home/james/ghostimages/rerunv5/plots/selectionplots{}'.format(k), bbox_inches='tight')
+    plt.tight_layout()
+    plt.show()
+```
+
+```{python}
+""""""
+"""load 202003066 2020-01-14 flatmaps
+indeed we can see there are ghosts"""
+
+dirfile = '/home/james/synthbeamdata/2020-03-16'
+c50 = np.cos(np.radians(50))
+azmin = -25./c50
+azmax = 25./c50
+maplist = np.linspace(1,256,256, dtype='int')
+flatmaps = np.zeros([len(maplist), 51, 51])
+
+for i, tes in enumerate(maplist):
+
+    flatmap, az, el = sbfit.get_flatmap(tes, dirfile, azmin = azmin, azmax=azmax)
+    #print(flatmap.shape)
+    #flatmap = np.flip(flatmap)
+    flatmap*-1
+    flatmaps[i, :, :] = flatmap
+
+plt.figure(figsize=(10,20))
+plt.imshow(flatmaps[254,:,:], aspect='equal', origin='lower',
+        extent=[np.min(az)*c50, np.max(az)*c50, np.min(el), np.max(el)])
+plt.xticks(np.arange(-12, 12, step=1))
+plt.yticks(np.arange(45, 65, step=1))
+plt.grid(True)
+
+```
+
+```{python}
+"""make nice pdf like JC"""
+
+plt.rc('figure',figsize=(16,8))
+nnx = 5
+nny=2
+k=0
+nplots = int(256/nnx/nny)+1
+
+elmin = min(el)
+elmax = max(el)
+azmin = min(az)
+azmax = max(az)
+
+
+for k in range(nplots):
+    plt.figure()
+    for i in range(nnx*nny):
+        ites = i+k*nnx*nny
+        if ites < 256:
+            plt.subplot(nny,nnx,i+1)
+            mm, ss = ft.meancut(flatmaps[ites,:,:],3)
+            plt.imshow(flatmaps[ites,:,:], aspect='equal',
+                   extent=[np.cos(np.radians(50))*azmin, np.cos(np.radians(50))*azmax, elmin, elmax])#,
+                   #vmin=mm-ss, vmax=mm+30*ss)
+            plt.title('TES {}'.format(ites+1))
+            plt.savefig('jj{}.png'.format(k))
+    plt.tight_layout()
+    plt.show()
+```
+
+```{python}
+
+```

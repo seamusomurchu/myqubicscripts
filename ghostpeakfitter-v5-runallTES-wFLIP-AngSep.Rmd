@@ -123,11 +123,12 @@ this method needs supervision
 add fit parameters to arrays to quantify
 perhaps pandas useful here"""
 # %matplotlib qt
+sampleindex = 2
 plt.figure(figsize=(10,10))
 #plt.subplots(121)
-plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+plt.imshow(flatmaps[sampleindex,:,:], aspect='equal', origin='lower',
         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-plt.title("TES {}".format(tes))
+plt.title("TES {}".format(ghostlist[sampleindex]))
 plt.xlabel("Azimuth [$^\circ$]")
 plt.ylabel("Elevation [$^\circ$]")
 #get peaks from plot
@@ -154,20 +155,20 @@ print(ang, dx, dy, angsep, angsep2)
 
 #plot contour fits and text do second plot
 #plt.subplots(121)
-plt.imshow(flatmaps[2,:,:], aspect='equal', origin='lower',
+plt.imshow(flatmaps[sampleindex,:,:], aspect='equal', origin='lower',
         extent=[np.min(az), np.max(az), np.min(el), np.max(el)])
-plt.title("TES {} Ghost Fitting".format(tes))
+plt.title("TES {} Ghost Fitting".format(ghostlist[sampleindex]))
 plt.xlabel("Azimuth [$^\circ$]")
 plt.ylabel("Elevation [$^\circ$]")
 plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k', label='Peak 1')
 plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
-plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+plt.text(fit_params1[1], fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
 plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
 plt.text(fit_params1[1], fit_params1[2]-2, "Angular Tilt {:03.2f}".format(ang, prec=2), {'color': 'y', 'fontsize': 12})
 plt.text(fit_params1[1], fit_params1[2]-3, "Angular Separation {:03.2f}".format(angsep, prec=2), {'color': 'c', 'fontsize': 12})
 
 #add relavant vars to arrays... once in the loop
-#plt.savefig("/home/james/ghostimages/ghostfits/ghostfits{}".format(tes))
+plt.savefig("/home/james/ghostimages/rerunv5/plotstesfit{}".format(ghostlist[sampleindex]), bbox_inches='tight')
 plt.pause(5)
 plt.close()
 ```
@@ -226,7 +227,7 @@ for i, tes in enumerate(ghostlist):
     #plot contour fits and text
     plt.contour(AZ, EL, data_fitted1.reshape(101, 101), 3, colors='k')
     plt.contour(AZ, EL, data_fitted2.reshape(101, 101), 3, colors='r')
-    plt.text(fit_params1[1]+1, fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
+    plt.text(fit_params1[1], fit_params1[2]+1, "{:08.2f}".format(fit_params1[0], prec=2), {'color': 'k', 'fontsize': 12})
     plt.text(fit_params2[1]+1, fit_params2[2]+1, "{:08.2f}".format(fit_params2[0], prec=2), {'color': 'r', 'fontsize': 12})
     plt.text(fit_params1[1], fit_params1[2]-2, "Angular Tilt {:03.2f}".format(ang, prec=2), {'color': 'y', 'fontsize': 12})
     plt.text(fit_params1[1], fit_params1[2]-3, "Angular Separation {:03.2f}".format(angsep, prec=2), {'color': 'c', 'fontsize': 12})
@@ -399,14 +400,14 @@ plt.figure(figsize=(16,8))
 plt.xlabel("TES Number")
 plt.ylabel("Tilt Angle [$^\circ$]")
 plt.plot(newarr[0], np.ones(len(newarr[8]))*np.mean(newarr[8]),
-         '-', color=current_palette[0], markersize=12, label='Mean Angle {:3.2f}$^\circ$'.format(avg))
+         '-', lw=3, color=current_palette[0], markersize=12, label='Mean Angle {:3.2f}$^\circ$'.format(avg))
 plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Tilt Angle')
-plt.plot(newarr[0], slope*newarr[0] + intercept, '--', lw=5, color=current_palette[0], 
-         markersize=20, label=r'$r^2 = {:03.2f}$'.format(r_value**2, prec=2))
+#plt.plot(newarr[0], slope*newarr[0] + intercept, '--', lw=5, color=current_palette[0], 
+         #markersize=20, label=r'$r^2 = {:03.2f}$'.format(r_value**2, prec=2))
 
 plt.legend(loc='upper left')
 
-#plt.savefig("/home/james/ghostimages/rerunv5/plots/tiltangles", bbox_inches='tight')
+plt.savefig("/home/james/ghostimages/rerunv5/plots/tiltangles", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1483,46 +1484,50 @@ albiet, necessarily so"""
 
 ```{python}
 #for asic1
-plt.figure(figsize=(16,10))
-plt.subplot(4,1,1)
+plt.figure(figsize=(16,20))
+plt.tight_layout()
+
+plt.subplot(8,1,1)
 plt.bar(r, colar11, color=current_palette[0], edgecolor='white', width=width, label="ASIC1 COL1")
 plt.ylabel("ASIC1 COL1")
 plt.yticks([0,1])
-plt.subplot(4,1,2)
+plt.subplot(8,1,2)
 plt.bar(r, colar12, color=current_palette[1], edgecolor='white', width=width, label="ASIC1 COL2")
 plt.ylabel("ASIC1 COL2")
 plt.yticks([0,1])
-plt.subplot(4,1,3)
+plt.subplot(8,1,3)
 plt.bar(r, colar13, color=current_palette[2], edgecolor='white', width=width, label="ASIC1 COL3")
 plt.ylabel("ASIC1 COL3")
 plt.yticks([0,1])
-plt.subplot(4,1,4)
+plt.subplot(8,1,4)
 plt.bar(r, colar14, color=current_palette[3], edgecolor='white', width=width, label="ASIC1 COL4")
 plt.ylabel("ASIC1 COL4")
-plt.xlabel("Column Number")
+#plt.xlabel("Column Number")
 plt.yticks([0,1])
 
 #plt.savefig("/home/james/ghostimages/rerunv5/plots/ghostinstances1", bbox_inches='tight')
 
 #for asic2
-plt.figure(figsize=(16,10))
-plt.subplot(4,1,1)
-plt.bar(r, colar21, color=current_palette[0], edgecolor='white', width=width, label="ASIC1 COL1")
+#plt.figure(figsize=(16,10))
+plt.subplot(8,1,5)
+plt.bar(r, colar21, color=current_palette[4], edgecolor='white', width=width, label="ASIC1 COL1")
 plt.ylabel("ASIC2 COL1")
 plt.yticks([0,1])
-plt.subplot(4,1,2)
-plt.bar(r, colar22, color=current_palette[1], edgecolor='white', width=width, label="ASIC1 COL2")
+plt.subplot(8,1,6)
+plt.bar(r, colar22, color=current_palette[5], edgecolor='white', width=width, label="ASIC1 COL2")
 plt.ylabel("ASIC2 COL2")
 plt.yticks([0,1])
-plt.subplot(4,1,3)
-plt.bar(r, colar23, color=current_palette[2], edgecolor='white', width=width, label="ASIC1 COL3")
+plt.subplot(8,1,7)
+plt.bar(r, colar23, color=current_palette[6], edgecolor='white', width=width, label="ASIC1 COL3")
 plt.ylabel("ASIC2 COL3")
 plt.yticks([0,1])
-plt.subplot(4,1,4)
-plt.bar(r, colar24, color=current_palette[3], edgecolor='white', width=width, label="ASIC1 COL4")
+plt.subplot(8,1,8)
+plt.bar(r, colar24, color=current_palette[7], edgecolor='white', width=width, label="ASIC1 COL4")
 plt.ylabel("ASIC2 COL4")
 plt.xlabel("Column Number")
 plt.yticks([0,1])
+
+plt.savefig("/home/james/ghostimages/rerunv5/plots/columns", bbox_inches='tight')
 
 #plt.savefig("/home/james/ghostimages/rerunv5/plots/ghostinstances2", bbox_inches='tight')
 ```
