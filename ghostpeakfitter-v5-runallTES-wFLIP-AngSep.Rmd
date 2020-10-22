@@ -919,6 +919,10 @@ print(px.shape)
 ```
 
 ```{python}
+print("mean tilt angle", np.mean(angle))
+```
+
+```{python}
 """maybe fit a line and see if statitstically significant, does this indicate optical or electrical cause"""
 from scipy import stats
 font = {'family' : 'normal',
@@ -938,7 +942,9 @@ plt.plot(r, abline_values, color=current_palette[0], lw=5,
 plt.xlabel('Radius [m]')
 plt.ylabel("Tilt Angle [$^\circ$]")
 plt.legend()
-plt.savefig("/home/james/ghostimages/rerunv5/plots/randanglev2", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/randanglev2", bbox_inches='tight')
+print("mean tilt angle", np.mean(angle))
+
 
 #now do for sep angle
 slope, intercept, r_value, p_value, std_err = stats.linregress(r, anglesep)
@@ -950,7 +956,7 @@ plt.plot(r, abline_values, color=current_palette[1], lw=5,
 plt.xlabel('Radius [m]')
 plt.ylabel("Separation Angle [$^\circ$]")
 plt.legend()
-plt.savefig("/home/james/ghostimages/rerunv5/plots/sepanglev2", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/sepanglev2", bbox_inches='tight')
 ```
 
 ```{python}
