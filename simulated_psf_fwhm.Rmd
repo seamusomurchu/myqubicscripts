@@ -5,7 +5,7 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.2'
-      jupytext_version: 1.6.0
+      jupytext_version: 1.3.0
   kernelspec:
     display_name: Python 3
     language: python
@@ -30,10 +30,10 @@ psflist = np.array([6, 37, 50, 58, 76, 93])
 
 psfdata = np.zeros([6, 3, 251001])
 for i, tes in enumerate(psflist):
-    data = np.loadtxt('/home/james/TESonSky/psf{}.dat'.format(tes), skiprows=1)
+    data = np.loadtxt('/home/james/TESonsky/psf{}.dat'.format(tes), skiprows=1)
     psfdata[i,:,:] = data.T
 
-plt.figure(figsize=(10,10))
+plt.figure(figsize=(16,16))
 for i , tes in enumerate(psflist):
     plt.subplot(2,3,i+1)
     plt.scatter(psfdata[i,0,:], psfdata[i,1,:]+50, c=psfdata[i,2,:])
@@ -53,7 +53,7 @@ def makemeshgrid(psfdata, meshsize):
 
     # Interpolate (x,y,z) points [mat] over a normal (x,y) grid [X,Y]
     #   Depending on your "error", you may be able to use other methods
-    Z = griddata((psfdata[0,:], psfdata[1,:]), psfdata[2,:], (X,Y), method='nearest')
+    Z = griddata((psfdata[0,:], psfdata[1,:]), psfdata[2,:]**2, (X,Y), method='nearest')
 
     #plt.pcolormesh(X,Y,Z)
     #plt.show()
@@ -193,9 +193,11 @@ xr = np.linspace(x0, x1, x1-x0)
 yr = np.linspace(y0, y1, x1-x0)
 zi = psfmesh[tes76,:,:][xr.astype(np.int), yr.astype(np.int)]
 zi = scipy.ndimage.map_coordinates(np.transpose(psfmesh[tes76,:,:]), np.vstack((xr,yr)))
-azi = np.linspace(X[x0], X[x1], len(zi))
+#azi = np.linspace(X[x0], X[x1], len(zi))
+azi = np.linspace(-1*np.sqrt(X[x0]**2+Y[y0]**2), np.sqrt(X[x1]**2+Y[y1]**2), len(zi))
+print(np.sqrt(X[x0]**2+Y[y0]**2), np.sqrt(X[x1]**2+Y[y1]**2))
 
-peaks, _ = find_peaks(zi, prominence=0.2)
+peaks, _ = find_peaks(zi, prominence=0.1)
 results_half = peak_widths(zi, peaks, rel_height=0.5)
 print(results_half)
 
@@ -211,6 +213,7 @@ plt.plot(azi[peaks], zi[peaks], "x", mew=5, ms=10,
          label="Peak Sep {:3.2}$^\circ$, {:3.2}$^\circ$".format(azi[peaks][1]-azi[peaks][0], azi[peaks][1]-azi[peaks][2]))
 
 plt.legend(loc='upper left', fontsize=15)
+#plt.xticks(-10,10,step=1)
 
 ```
 
@@ -255,6 +258,7 @@ x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 # Extract the values along the line
 zi = psfmesh[i,:,:][x.astype(np.int), y.astype(np.int)]
 zi = scipy.ndimage.map_coordinates(np.transpose(psfmesh[i,:,:]), np.vstack((x,y)))
+azi = np.linspace(x0, x1, len(zi))
 
 plt.figure(figsize=(16,8))
 plt.subplot(1,2,1)
@@ -288,7 +292,16 @@ print("FWHM in deg ", results_half[0] * ((max(azi) - min(azi))/num) ) #= fwhm in
 
 ```{python}
 n=8
-print(np.degrees(2e-3 / ((n -1) * 14e-3)))
+print(np.degrees(2e-3 / ((n - 1) * 14e-3)))
+```
+
+```{python}
+print(psfdata[5,0,:].shape, min(psfdata[5,0,:]), psfmesh.shape)
+xazvals = np.linspace(min(psfdata[5,0,:]), max(psfdata[5,0,:]), 201)
+xelvals = np.linspace(max(psfdata[5,1,:]), min(psfdata[5,1,:]), 201)
+xval1, xval2 =xazvals[x0], xazvals[x1]
+yval1, yval2 = xelvals[y0], xelvals[y1]
+print(xval1, xval2)
 ```
 
 ```{python}
@@ -299,15 +312,23 @@ x1, y1 = 200, 7
 num = 101
 x, y = np.linspace(x0, x1, num), np.linspace(y0, y1, num)
 # Extract the values along the line
-zi = psfmesh[4,:,:][x.astype(np.int), y.astype(np.int)]
-zi = scipy.ndimage.map_coordinates(np.transpose(psfmesh[4,:,:]), np.vstack((x,y)))
+zi = psfmesh[5,:,:][x.astype(np.int), y.astype(np.int)]
+zi = scipy.ndimage.map_coordinates(np.transpose(psfmesh[5,:,:]), np.vstack((x,y)))
+print(zi.shape)
+azi = np.linspace( xval1, xval2, len(zi))
+
 
 plt.figure(figsize=(16,8))
 plt.subplot(1,2,1)
-plt.imshow(psfmesh[4,:,:], aspect='equal')
+plt.imshow(psfmesh[5,:,:], aspect='equal')
 plt.plot([x0, x1], [y0, y1], 'ro-')
 
 plt.subplot(1,2,2)
+plt.imshow(psfmesh[5,:,:], aspect='equal', extent=[min(psfdata[5,0,:]), max(psfdata[5,0,:]), min(psfdata[5,1,:]), max(psfdata[5,1,:])])
+plt.plot([xazvals[x0], xazvals[x1]], [xelvals[y0], xelvals[y1]], 'ro-')
+
+
+plt.figure(figsize=(16,8))
 plt.plot(azi, zi)
 
 peaks, _ = find_peaks(zi, prominence=0.2)
@@ -318,16 +339,21 @@ print(results_half)
 #print(azi[peaks])
 plt.plot(azi[peaks], zi[peaks], "x")
 plt.plot(azi[peaks], results_half[1], '_', mew=3, markersize=12)
+plt.xlim(-12,12)
+plt.xticks(np.arange(-12,12, step=1))
+plt.grid(True)
+
+
 ```
 
 ```{python}
 print(len(zi), "length zi cut")
 print(max(azi) - min(azi), "degrees")
 print( num, "points")
-print((max(azi) - min(azi))/num, "degrees/point in whole image")
-print(((max(azi) - min(azi))/num) * len(zi), "degrees for cut length")
+print((max(azi) - min(azi))/len(zi), "degrees/point in whole image")
+#print(((max(azi) - min(azi))/num) * len(zi), "degrees for cut length")
 
-print("FWHM in deg ", results_half[0] * ((max(azi) - min(azi))/num) ) #= fwhm in deg
+print("FWHM in deg ", results_half[0] * (max(azi) - min(azi))/len(zi) ) #= fwhm in deg
 ```
 
 ```{python}
