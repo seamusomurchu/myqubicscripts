@@ -5,7 +5,7 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.2'
-      jupytext_version: 1.3.0
+      jupytext_version: 1.6.0
   kernelspec:
     display_name: Python 3
     language: python
@@ -19,19 +19,24 @@ import matplotlib.pyplot as plt
 ```
 
 ```{python}
-cutdir = '/home/james/graspfiles/newsourcetesting/'
+#cutdir = '/home/james/graspfiles/newsourcetesting/'
+cutdir = '/media/james/DATA/LaptopFiles/graspfiles/newsourcetesting/'
 #print(glob.glob(cutdir+"*.cut"))
 cuts = glob.glob(cutdir+"*cut.cut")
 print(cuts)
 print(cuts[0])
 print(cuts[1])
 print(cuts[2])
+print(cuts[3])
+# my150data = glob.glob(cutdir+"myMODAL150source.cut")
+# print(my150data)
 ```
 
 ```{python}
-newcut = np.loadtxt(cuts[0], skiprows=3, delimiter=',').T
-oldcut = np.loadtxt(cuts[1], skiprows=3, delimiter=',').T
-gauscut = np.loadtxt(cuts[2], skiprows=3, delimiter=',').T
+newcut = np.loadtxt(cuts[1], skiprows=3, delimiter=',').T
+oldcut = np.loadtxt(cuts[2], skiprows=3, delimiter=',').T
+gauscut = np.loadtxt(cuts[0], skiprows=3, delimiter=',').T
+my150cut = np.loadtxt(cuts[3], skiprows=3, delimiter=',').T
 ```
 
 ```{python}
@@ -45,6 +50,7 @@ plt.figure(figsize=(16,8))
 plt.plot(gauscut[0,:], gauscut[1,:], label='Gaussian Model', linewidth=3)
 plt.plot(oldcut[0,:], oldcut[1,:], label='Previous Aperture Field', linewidth=3)
 plt.plot(newcut[0,:], newcut[1,:], label='Updated Aperture Field', linewidth=3)
+plt.plot(my150cut[0,:], my150cut[1,:], label='My Aperture Field', linewidth=3)
 
 plt.legend(loc='upper right')
 plt.grid(True)
