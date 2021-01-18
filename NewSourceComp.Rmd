@@ -48,9 +48,9 @@ plt.rc('font', **font)
 plt.figure(figsize=(16,8))
 
 plt.plot(gauscut[0,:], gauscut[1,:], label='Gaussian Model', linewidth=3)
-plt.plot(oldcut[0,:], oldcut[1,:], label='Previous Aperture Field', linewidth=3)
-plt.plot(newcut[0,:], newcut[1,:], label='Updated Aperture Field', linewidth=3)
-plt.plot(my150cut[0,:], my150cut[1,:], label='My Aperture Field', linewidth=3)
+plt.plot(oldcut[0,:], oldcut[1,:], label='Donnacha', linewidth=3)
+plt.plot(newcut[0,:], newcut[1,:], label='Dave', linewidth=3)
+plt.plot(my150cut[0,:], my150cut[1,:], label='My Version of Daves', linewidth=3)
 
 plt.legend(loc='upper right')
 plt.grid(True)
@@ -64,6 +64,7 @@ plt.ylim(-85, -31)
 
 ```{python}
 cutdir = '/home/james/graspfiles/newsourcetesting/'
+cutdir = '/media/james/DATA/LaptopFiles/graspfiles/newsourcetesting/'
 fpcuts = glob.glob(cutdir+"*deg.cut")
 fpcuts.sort()
 for file in fpcuts:
