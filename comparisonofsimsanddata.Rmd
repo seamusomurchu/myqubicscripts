@@ -13,9 +13,9 @@ jupyter:
 ---
 
 ```{python}
-#import sys
-#sys.path.append('/home/james/multifrequency/')
-#from CSFPA_dataIO import *
+import sys
+sys.path.append('/home/james/multifrequency/')
+from CSFPA_dataIO import *
 import matplotlib.pyplot as plt
 import qubic.sb_fitting as sbfit
 import scipy.optimize as opt
