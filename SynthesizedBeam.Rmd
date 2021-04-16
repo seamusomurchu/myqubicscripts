@@ -89,7 +89,6 @@ centers = q.horn.center[:, 0:2]
 col = q.horn.column
 row = q.horn.row
 
-
 plt.figure(figsize=(14,14))
 q.horn.plot()
 
@@ -110,6 +109,10 @@ plt.xlabel('Horn Reference Frame X (m)')
 
 ```
 
+```{python}
+print(centers.shape, col.shape, row.shape)
+```
+
 ### Closing and opening horns
 
 
@@ -123,14 +126,45 @@ hornsFI = instFI.horn.open
 
 
 hornsTD = (col >= 8) & (col <= 15) & (row >= 8) & (row <= 15)
-# print(hornsTD)
+#print(hornsTD)
 
 ### Now create First Instrument and TD monochromatic
 instTD = qubic.QubicInstrument(d)
 instTD.horn.open[~hornsTD] = False
 
-plt.figure()
+cnt = 1
+TDhornsFIconf = np.zeros(400, dtype=int)
+
+plt.figure(figsize=(14,14))
 instTD.horn.plot()
+
+for i in range(len(centers)):
+    if hornsTD[i] == True:
+        #plt.text(centers[i,0]-0.006, centers[i,1], 'c{0:}'.format(col[i]), color='r',fontsize=8)
+        #plt.text(centers[i,0]+0.00001, centers[i,1], 'r{0:}'.format(row[i]), color='b',fontsize=8)
+        plt.text(centers[i,0]-0.005, centers[i,1]-0.004, 'h {0:}'.format(str(i+1)), color='g',fontsize=8)
+        plt.text(centers[i,0]-0.005, centers[i,1], 'td {0:}'.format(str(cnt)), color='r',fontsize=8)
+        
+        TDhornsFIconf[i] = cnt
+        
+        cnt+=1
+    
+
+plt.ylabel('Horn Reference Frame Y (m)')
+plt.xlabel('Horn Reference Frame X (m)')
+
+```
+
+```{python}
+#print(hornsTD)
+#print(TDhornsFIconf)
+FIhorns = np.linspace(1,400,400, dtype=int)
+#print(FIhorns)
+
+print(FIhorns[np.where(TDhornsFIconf == 1)])
+
+for i in range(len(FIhorns)):
+    print(FIhorns[i], TDhornsFIconf[i])
 ```
 
 ```{python}
