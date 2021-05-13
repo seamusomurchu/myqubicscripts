@@ -58,7 +58,7 @@ indeed we can see there are ghosts"""
 #complist = [9, 16, 22, 24, 27, 50, 51, 57, 58, 59, 74, 75, 76, 86, 93, 106, 107, 110, 120, 123, 134, 135, 138, 141, 166,
     #170, 171, 172, 181, 186, 201, 208, 210, 213, 216, 218, 219]
 
-dirfile = '/home/james/synthbeamdata/2020-01-14'
+dirfile = '/media/james/DATA/LaptopFiles/synthbeamdata/2020-01-14'
 c50 = np.cos(np.radians(50))
 azmin = -20./c50
 azmax = 20./c50
@@ -168,7 +168,7 @@ plt.text(fit_params1[1], fit_params1[2]-2, "Angular Tilt {:03.2f}".format(ang, p
 plt.text(fit_params1[1], fit_params1[2]-3, "Angular Separation {:03.2f}".format(angsep, prec=2), {'color': 'c', 'fontsize': 12})
 
 #add relavant vars to arrays... once in the loop
-plt.savefig("/home/james/ghostimages/rerunv5/plotstesfit{}".format(ghostlist[sampleindex]), bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plotstesfit{}".format(ghostlist[sampleindex]), bbox_inches='tight')
 plt.pause(5)
 plt.close()
 ```
@@ -248,7 +248,7 @@ for i, tes in enumerate(ghostlist):
     
     
     #add relavant vars to arrays... once in the loop
-    plt.savefig("/home/james/ghostimages/rerunv5/ghostfits{}".format(tes), bbox_inches='tight')
+    #plt.savefig("/home/james/ghostimages/rerunv5/ghostfits{}".format(tes), bbox_inches='tight')
     plt.pause(3)
     plt.close()
 ```
@@ -334,14 +334,14 @@ for i, tes in enumerate(ghostlist):
 ```
 
 ```{python}
-datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle, anglesep)).T
-print(datmat.shape)
-with open('/home/james/ghostimages/rerunv5/objs_rerunv5.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(datmat, f)
+# datmat = np.vstack((tesnum, fit1x, fit1y, fit2x, fit2y, amp1, amp2, ampr, angle, anglesep)).T
+# print(datmat.shape)
+# with open('/home/james/ghostimages/rerunv5/objs_rerunv5.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+#     pickle.dump(datmat, f)
 
 #Getting back the objects:
-# with open('/home/james/ghostimages/rerun/objs.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
-#     datmat = pickle.load(f)
+with open('/media/james/DATA/LaptopFiles/ghostimages/rerunv5/objs_rerunv5.pkl',  'rb') as f:  # Python 3: open(..., 'rb')
+    datmat = pickle.load(f)
 
 #save fits data separately 
 # fitsmat = np.vstack((fitsdata1, fitsdata2))
@@ -370,6 +370,10 @@ print(datmat.shape, newarr.shape)
 # newarr = np.reshape(newarr, (30,9)).T
         
 # print(newarr.shape, newarr[:, 0])
+```
+
+```{python}
+plt.rcParams['figure.facecolor'] = 'white'
 ```
 
 ```{python}
@@ -407,7 +411,43 @@ plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, lab
 
 plt.legend(loc='upper left')
 
-plt.savefig("/home/james/ghostimages/rerunv5/plots/tiltangles", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/tiltangles", bbox_inches='tight')
+```
+
+```{python}
+"""THIS IS PLOT IS NOT SO HELPFUL... version 2 with standard deviation"""
+font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 22}
+
+plt.rc('font', **font)
+current_palette = sns.color_palette('muted')
+#sns.palplot(current_palette)
+#calc average
+avg = np.mean(newarr[9])
+sd = np.sqrt(np.sum((newarr[9]-avg)**2) / len(newarr[9]))
+npsd = np.std(newarr[9], ddof=0)
+print(sd, npsd)
+sdp1 = avg+npsd
+sdp2 = avg-npsd
+
+plt.figure(figsize=(16,8))
+plt.xlabel("TES Number")
+plt.ylabel("Separation Angle [$^\circ$]")
+plt.plot(newarr[0], newarr[9], '.', color=current_palette[0], markersize=20, label='Ghost Angle')
+plt.plot(newarr[0], np.ones(len(newarr[9]))*np.mean(newarr[9]),
+         '--', color=current_palette[1], lw=5, markersize=12, label='Mean {:3.2f}$^\circ$'.format(avg))
+
+#try plot stdv
+plt.plot(newarr[0], np.ones(len(newarr[9]))*sdp1, 
+         '--', color=current_palette[2], lw=5, markersize=12, label='\u03C3 = {:3.2f}$^\circ$'.format(npsd))
+plt.plot(newarr[0], np.ones(len(newarr[9]))*sdp2, 
+         '--', color=current_palette[2], lw=5, markersize=12)
+plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
+
+plt.legend(loc='upper left')
+
+plt.savefig("/media/james/DATA/LaptopFiles/ghostimages/plots/TILTanglesSDEV_NEW.png", bbox_inches='tight')
 ```
 
 ```{python}
@@ -455,7 +495,7 @@ sdp2 = avg-npsd
 
 plt.figure(figsize=(16,8))
 plt.xlabel("TES Number")
-plt.ylabel("Angle [$^\circ$]")
+plt.ylabel("Tilt Angle [$^\circ$]")
 plt.plot(newarr[0], newarr[8], '.', color=current_palette[0], markersize=20, label='Ghost Angle')
 plt.plot(newarr[0], np.ones(len(newarr[8]))*np.mean(newarr[8]),
          '--', color=current_palette[1], lw=5, markersize=12, label='Mean {:3.2f}$^\circ$'.format(avg))
@@ -469,7 +509,7 @@ plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
 
 plt.legend(loc='upper left')
 
-#plt.savefig("/home/james/ghostimages/plots/anglesSDEV", bbox_inches='tight')
+plt.savefig("/media/james/DATA/LaptopFiles/ghostimages/plots/anglesSDEV_NEW.png", bbox_inches='tight')
 ```
 
 ```{python}
@@ -571,7 +611,7 @@ plt.plot(newarr[0], np.ones(len(newarr[7]))*sdp2,
 plt.fill_between(newarr[0], sdp1, sdp2, facecolor=current_palette[2], alpha=0.2)
 
 plt.legend(loc=(0.07, 0.75))
-#plt.savefig("/home/james/ghostimages/rerunv5/plots/amplitudesSDEV", bbox_inches='tight')
+plt.savefig("/media/james/DATA/LaptopFiles/ghostimages/rerunv5/plots/amplitudesSDEV_NEW.png", bbox_inches='tight')
 ```
 
 ```{python}
@@ -976,7 +1016,7 @@ plt.plot(r, abline_values, color=current_palette[3], lw=5,
 plt.xlabel('Radius [m]')
 plt.ylabel("Amplitude Ratio")
 plt.legend()
-plt.savefig("/home/james/ghostimages/rerunv5/plots/randamprv2", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/randamprv2", bbox_inches='tight')
 ```
 
 ```{python}
@@ -1533,7 +1573,7 @@ plt.ylabel("ASIC2 COL4")
 plt.xlabel("Column Number")
 plt.yticks([0,1])
 
-plt.savefig("/home/james/ghostimages/rerunv5/plots/columns", bbox_inches='tight')
+#plt.savefig("/home/james/ghostimages/rerunv5/plots/columns", bbox_inches='tight')
 
 #plt.savefig("/home/james/ghostimages/rerunv5/plots/ghostinstances2", bbox_inches='tight')
 ```

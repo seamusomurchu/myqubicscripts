@@ -1,0 +1,152 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.6.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.signal as scsig
+```
+
+```{python}
+rads = [0, np.pi/8, np.pi/4, np.pi/2, np.pi]
+```
+
+```{python}
+def quaddemod(dedata, time, calsource, period, shift):
+    FREQ_SAMPLING = 1. / (time[1] - time[0])
+    print(FREQ_SAMPLING)
+    size_period = int(FREQ_SAMPLING * period) + 1
+    print(size_period)
+    data_src_shift = np.interp(time - period / 2, time, calsource, period=period)
+    window = np.ones((size_period,)) / size_period
+    #print(window.shape, window)
+    #window = np.hanning(245)
+    print(dedata.shape)
+    demod = scsig.fftconvolve(
+                (np.sqrt((dedata* calsource*np.cos(shift)) ** 2 + (dedata*calsource*np.sin(shift)) ** 2)) / np.sqrt(2),
+                window, mode='same')
+#     demod = np.zeros_like(dedata)
+#     for i in range(len(dedata)):
+#         demod[i] = scsig.fftconvolve(
+#                 (np.sqrt((dedata[i]* calsource) ** 2 + (dedata[i] * data_src_shift) ** 2)) / np.sqrt(2),
+#                 window, mode='same')
+
+#     nper = 4.
+#     nsamples = int(nper * period / (time[1] - time[0]))
+#     timereturn = time[nsamples:-nsamples]
+#     demodulated = demod[nsamples:-nsamples]
+    
+    return demod
+
+def cohdemod(dedata, time, calsource, period, shift):
+    
+    FREQ_SAMPLING = 1. / (time[1] - time[0])
+    print(FREQ_SAMPLING)
+    size_period = int(FREQ_SAMPLING * period) + 1
+    print(size_period)
+    window = np.ones((size_period,)) / size_period
+    #window = np.hanning(245)
+    #print(window.shape, window)
+    
+    demod = scsig.fftconvolve(dedata * calsource, window, mode='same')*np.cos(shift) / 2
+    return demod
+```
+
+```{python}
+time = np.linspace(1,50,10204)
+calperiod = 1
+detperiod = 5
+#31cycles in 200 seconds = 0.155 cycles/sec
+w = 2*np.pi/calperiod
+wd = 2*np.pi/detperiod
+shift = np.pi
+
+y = 2*np.sin(w * time + 0)
+yshift = 2*np.sin(w * time + shift)
+
+detdat = 0.5*np.sin(wd * time + 0)
+
+plt.figure(figsize=(16,4))
+plt.plot(time, y)
+plt.plot(time, yshift)
+#plt.plot(time+calperiod/2, y)
+plt.title('calsource')
+
+
+plt.figure(figsize=(16,4))
+plt.plot(time, detdat)
+plt.title('guess demod')
+
+plt.figure(figsize=(16,4))
+plt.plot(time, detdat*y)
+plt.title('mix')
+
+d = quaddemod(detdat*y, time, y, calperiod, 0)
+ds = quaddemod(detdat*y, time, y, calperiod, np.pi/4)
+
+dataf = ft.filter_data(time, d, 0, 2*w*t)
+
+plt.figure(figsize=(16,4))
+plt.plot(time, d-np.mean(d))
+plt.plot(time, ds-np.mean(ds))
+plt.title('quad demod')
+
+shift = 0 # np.pi/2.25
+
+ctq = cohdemod(detdat*y, time, y, calperiod, 0)
+cs = cohdemod(detdat*y, time, y, calperiod, np.pi/4)
+plt.figure(figsize=(16,4))
+plt.plot(time, ctq)
+plt.plot(time, cs)
+plt.title('coherent')
+
+
+plt.figure(figsize=(16,4))
+plt.plot(time, detdat*y*y)
+plt.title('guess*calsource*calsource (coherent)')
+plt.figure(figsize=(16,4))
+plt.plot(time,  np.sqrt(y*detdat*y)**2+(y*detdat*y*np.sin(np.pi/2))**2)
+plt.title('guess*calsource*calsource quad')
+```
+
+```{python}
+guess = detdat*y
+print(guess.shape)
+
+for i in range(len(guess)):
+    print(i)
+```
+
+```{python}
+from scipy import linalg, fft
+
+test = np.array(np.sqrt((y*detdat*y)**2+(y*detdat*y*np.sin(np.pi/2))**2)/np.sqrt(2))
+test = test[0:10030]
+
+sp1 = sp_fft.fftn(test)
+sp2 = sp_fft.fftn(np.hanning(209))
+
+
+#plt.plot(sp1*sp2)
+
+plt.plot(sp_fft.ifftn(sp1*sp2))
+```
+
+```{python}
+print(np.sqrt((y*detdat*y)**2+(y*detdat*y*np.sin(np.pi/2))**2).shape)
+```
+
+```{python}
+
+```
