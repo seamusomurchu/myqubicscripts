@@ -182,6 +182,10 @@ X = np.linspace(azmin, azmax, 301)
 Y = np.linspace(elmax, elmin, 301)
 
 print("psf data shape, ", psfdata[tes76,1,:].shape, X.shape)
+print("mesh shape", psfmesh[tes76,:,:].shape)
+#
+temp = psfmesh[tes76,:,:]
+print("temp", temp.shape)
 
 # x0, y0 = 50, 158# These are in _pixel_ coordinates!! in DEGREES
 # x1, y1 = 175, 32
@@ -190,30 +194,30 @@ x1, y1 = 250, 62
 
 plt.figure(figsize=(16,12))
 plt.subplot(1,2,1)
-plt.imshow(psfmesh[tes76,:,:], aspect='equal')
+plt.imshow(temp, aspect='equal')
 plt.grid(True)
 plt.plot([x0, x1], [y0, y1], 'ro-')
 
 
 plt.subplot(1,2,2)
-plt.imshow(psfmesh[tes76,:,:], aspect='equal', extent=[azmin, azmax, elmin, elmax])
+plt.imshow(psfmesh[tes76,:,:]**2, aspect='equal', extent=[azmin, azmax, elmin, elmax])
 plt.grid(True)
 plt.plot([X[x0], X[x1]], [Y[y0], Y[y1]], 'ro-')
 
 xr = np.linspace(x0, x1, x1-x0)
 yr = np.linspace(y0, y1, x1-x0)
-zi = psfmesh[tes76,:,:][xr.astype(np.int), yr.astype(np.int)]
-zi = scipy.ndimage.map_coordinates(np.transpose(psfmesh[tes76,:,:]), np.vstack((xr,yr)))
+zi = temp[xr.astype(np.int), yr.astype(np.int)]
+zi = scipy.ndimage.map_coordinates(np.transpose(temp), np.vstack((xr,yr)))
 #azi = np.linspace(X[x0], X[x1], len(zi))
 azi = np.linspace(-1*np.sqrt(X[x0]**2+Y[y0]**2), np.sqrt(X[x1]**2+Y[y1]**2), len(zi))
 print(np.sqrt(X[x0]**2+Y[y0]**2), np.sqrt(X[x1]**2+Y[y1]**2))
 degpt = (max(azi) - min(azi)) / len(zi)
 
-peaks, _ = find_peaks(zi, prominence=0.1)
+peaks, _ = find_peaks(zi/max(zi), prominence=0.1)
 results_half = peak_widths(zi/max(zi), peaks, rel_height=0.5)
 print(results_half)
 
-degpt = (azmax - azmin)/101
+degpt = (max(azi) - min(azi))/len(azi)
 print(degpt)
 
 plt.figure(figsize=(16,8))
@@ -227,7 +231,7 @@ plt.plot(azi[peaks], zi[peaks]/max(zi[peaks]), "x", color='#1f77b4', mew=5, ms=1
 plt.ylabel('Normalised Intensity')
 plt.xlabel(r'Angle $\theta ^\circ$')
 plt.legend(loc='upper right')
-plt.xticks(np.arange(-18,18,step=1));
+#plt.xticks(np.arange(-18,18,step=1));
 plt.xlim([-12, 12])
 #plt.savefig("/home/james/Pictures/sim_meas.png", bbox_inches='tight', dpi=300)
 ```
@@ -241,6 +245,7 @@ flatmap150, az, el = sbfit.get_flatmap(TESNum, dirfile, azmin = -20.088500976562
 print("flatmap shape", flatmap150.shape)
 AZ, EL = np.meshgrid(az, el)
 AZ = AZ*np.cos(np.deg2rad(50))
+print("min max az el ", min(el), max(el), min(az), max(az))
 
 plt.figure(figsize=(12,16))
 plt.imshow(flatmap150, aspect='equal', origin='lower',
@@ -299,19 +304,28 @@ zi150 = scipy.ndimage.map_coordinates(np.transpose(flatmap150), np.vstack((xr,yr
 #degpt = (X[x2] - X[x0]) /len(zi150)
 #azi = np.linspace(X[x0], X[x2], len(zi))
 azi150 = np.linspace(-1*np.sqrt(X[x0]**2+(Y[y0]-50)**2), np.sqrt(X[x2]**2+(Y[y2]-50)**2), len(zi150))
-degpt150 = (max(azi150) - min(azi150)) / len(zi150)
+degpt150 = (max(azi150) - min(azi150)) / len(azi150)
 
-peaks150, _ = find_peaks(zi150, prominence=0.75e6)
+peaks150, _ = find_peaks(zi150, prominence=0.5e6)
 results_half150 = peak_widths(zi150/max(zi150), peaks150, rel_height=0.5)
 
-plt.plot(azi150, zi150, label="Cut", lw=4)
-plt.plot(azi150[peaks150], zi150[peaks150], "x", label="Peaks",  mew=5, ms=10)
+plt.plot(azi150, zi150/max(zi150), label="Cut", lw=4)
+plt.plot(azi150[peaks150], zi150[peaks150]/max(zi150), "x", label="Peaks",  mew=5, ms=10)
 plt.plot(azi150[peaks150], results_half150[1], '_', mew=5, ms=10, 
      label="FWHM = {:3.3}$^\circ$".format(results_half150[0][1]*degpt150))
-plt.plot(azi150[peaks150], zi150[peaks150], "x", mew=5, ms=10, 
+plt.plot(azi150[peaks150], zi150[peaks150]/max(zi150), "x", mew=5, ms=10, 
      label="Peak Sep {:.2f}$^\circ$, {:.2f}$^\circ$".format(azi150[peaks150][1]-azi150[peaks150][0], azi150[peaks150][1]-azi150[peaks150][2]))
-plt.ylim(0,4e6)
+plt.ylim(0,1)
+plt.xticks(np.arange(-11,11,step=1));
 plt.legend(loc='upper left', fontsize=15)
+
+print("degpt150", degpt150, results_half150[0][1])
+print(flatmap150)
+```
+
+```{python}
+print(degpt150)
+print(results_half150)
 ```
 
 ```{python}
@@ -341,15 +355,15 @@ plt.plot(azi150, zi150/max(zi150), color='xkcd:pale orange', label="150 GHz Meas
 plt.plot(azi150[peaks150], results_half150[1], '_', color='xkcd:pale orange', mew=3, ms=34, 
      label="FWHM = {:3.3}$^\circ$".format(results_half150[0][1]*degpt150))
 plt.plot(azi150[peaks150], zi150[peaks150]/max(zi150[peaks150]), "x", color='xkcd:pale orange', mew=5, ms=10, 
-     label="Peak Sep {:.2f}$^\circ$, {:.2f}$^\circ$".format(azi150[peaks150][1]-azi150[peaks150][0], azi150[peaks150][1]-azi150[peaks150][2]))
+     label="Peak Separation {:.2f}$^\circ$, {:.2f}$^\circ$".format(azi150[peaks150][1]-azi150[peaks150][0], azi150[peaks150][1]-azi150[peaks150][2]))
 
 
 plt.plot(azi+1.8, zi/max(zi), color='xkcd:medium green', label="150 GHz Simulated Cut", lw=4)
 #plt.plot(azi[peaks], zi[peaks]/max(zi[peaks]), "x", color='#1f77b4', label="Peaks", mew=5, ms=10)
 plt.plot(azi[peaks]+1.8, results_half[1], '_', mew=3, ms=34, color='xkcd:medium green',
-         label="FWHM = {:3.3}$^\circ$".format(results_half[0][1]*degpt))
+         label="FWHM = {:3.2}$^\circ$".format(results_half[0][1]*degpt))
 plt.plot(azi[peaks]+1.8, zi[peaks]/max(zi[peaks]), "x", color='xkcd:medium green', mew=5, ms=10, 
-         label="Peak Sep {:3.2}$^\circ$, {:3.2}$^\circ$".format(azi[peaks][1]-azi[peaks][0], azi[peaks][1]-azi[peaks][2]))
+         label="Peak Separation {:3.2}$^\circ$, {:3.2}$^\circ$".format(azi[peaks][1]-azi[peaks][0], azi[peaks][1]-azi[peaks][2]))
 
 
 plt.ylabel('Normalised Intensity')
@@ -357,7 +371,13 @@ plt.xlabel(r'Angle $\theta ^\circ$')
 plt.legend(loc='upper left')
 plt.xticks(np.arange(-18,18,step=1));
 plt.xlim([-12, 12])
-#plt.savefig("/home/james/OneDrive/Thesisv2/Figures/figsc6/simandmeasuredcut.png", bbox_inches='tight', dpi=300)
+plt.savefig("/home/james/OneDrive/Thesisv2/Figures/figsc6/simandmeasuredcut_v3.png", bbox_inches='tight', dpi=300)
+```
+
+```{python}
+print(degpt)
+print(results_half)
+
 ```
 
 ```{python}
